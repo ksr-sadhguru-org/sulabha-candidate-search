@@ -10,7 +10,7 @@ finds and ranks matching candidates, explaining why each one matched.
 
 - `ResumeSearchUI/` — Angular frontend
 - `ResumeSearchAPI/` — Spring Boot backend (API, database, LLM integration)
-- `Sample Resumes/` — local test data, not part of the app (not committed)
+- `Tests/` — demo scenarios and the test resumes they use (`Candidate Resumes for Tests/`)
 
 ## Stack
 
