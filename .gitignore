@@ -21,8 +21,8 @@ npm-debug.log
 yarn-error.log
 __screenshots__/
 
-# --- Java / Maven (ResumeSearchJava) ---
-/ResumeSearchJava/target/
+# --- Java / Maven (ResumeSearchAPI) ---
+/ResumeSearchAPI/target/
 *.class
 
 # --- IDEs / editors ---

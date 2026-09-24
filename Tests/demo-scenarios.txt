@@ -1,6 +1,6 @@
 SULABHA DEMO SCENARIOS
 ======================
-Test resumes used are in: Sample Resumes/test resumes/
+Test resumes used are in: Tests/Candidate Resumes for Tests/
 Before running: DELETE http://localhost:8000/clear_all_data (wipes the DB clean)
 
 

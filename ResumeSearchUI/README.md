@@ -1,6 +1,6 @@
 # ResumeSearch UI
 
-Angular 22 client for the [ResumeSearchJava](../ResumeSearchJava) backend — upload resumes and search
+Angular 22 client for the [ResumeSearchAPI](../ResumeSearchAPI) backend — upload resumes and search
 candidates with a natural-language query.
 
 > New to this project? Start with the [top-level README](../README.md).
