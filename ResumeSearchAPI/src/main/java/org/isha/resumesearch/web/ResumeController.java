@@ -13,6 +13,7 @@ import org.isha.resumesearch.dto.ResumeUploadResponse;
 import org.isha.resumesearch.dto.SuggestApplicantDetailsRequest;
 import org.isha.resumesearch.extraction.ResumeTextExtractor;
 import org.isha.resumesearch.llm.LlmExtractor;
+import org.isha.resumesearch.llm.LlmUnavailableException;
 import org.isha.resumesearch.service.CandidateService;
 import org.isha.resumesearch.service.QueryService;
 import jakarta.validation.Valid;
@@ -124,10 +125,19 @@ public class ResumeController {
     public QueryResult query(@Valid @RequestBody QueryRequest request) {
         try {
             return queryService.query(request.query());
+        } catch (LlmUnavailableException e) {
+            throw e; // handled below - keeps its specific message instead of the generic one
         } catch (Exception e) {
             log.error("Error processing query: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error processing query");
         }
+    }
+
+    /** 502: the backend is up but the LLM it depends on isn't - the message is shown as-is in the UI. */
+    @ExceptionHandler(LlmUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleLlmUnavailable(LlmUnavailableException e) {
+        log.error("Error processing query: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(Map.of("message", e.getMessage()));
     }
 
     @DeleteMapping("/drop_all_tables")

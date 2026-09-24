@@ -9,6 +9,7 @@ import org.isha.resumesearch.dto.QueryParseResponse;
 import org.isha.resumesearch.dto.QueryPersonaMatch;
 import org.isha.resumesearch.dto.QueryResult;
 import org.isha.resumesearch.llm.LlmExtractor;
+import org.isha.resumesearch.llm.LlmUnavailableException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -87,6 +88,12 @@ public class QueryService {
         CompletableFuture<ApplicationFilterResponse> filtersFuture = CompletableFuture.supplyAsync(() -> llmExtractor.extractApplicationFilters(queryText));
 
         QueryParseResponse parsedQuery = parsedQueryFuture.join();
+        ApplicationFilterResponse filters = filtersFuture.join();
+        // Both calls hit the same endpoint with the same credentials, so a null from either almost always
+        // means the LLM itself is unreachable/misconfigured - AzureLlmExtractor has already logged the cause.
+        if (parsedQuery == null || filters == null) {
+            throw new LlmUnavailableException("Search failed: the LLM call failed - check the backend's OPENAI_* settings (API key, base URL, model) and its logs");
+        }
         List<String> requiredSkills = resolveRequired(parsedQuery.skills());
         List<String> optionalRoles = resolveOptional(parsedQuery.roles());
         QueryResult skillResults = queryRepository.getQueryResult(requiredSkills, optionalRoles);
@@ -100,7 +107,7 @@ public class QueryService {
             }
         }
 
-        QueryResult joinedResult = queryRepository.leftJoinWithApplicationData(new QueryResult(combinedMatches), filtersFuture.join());
+        QueryResult joinedResult = queryRepository.leftJoinWithApplicationData(new QueryResult(combinedMatches), filters);
         // Three bands, strongest match first: skill/taxonomy match, then full keyword match, then partial
         // keyword match (e.g. "sing" only ever found inside "Perusing"). Within each band, candidates who
         // also satisfy the application filters are shown before those who don't.

@@ -25,6 +25,10 @@ __screenshots__/
 /ResumeSearchAPI/target/
 *.class
 
+# --- Secrets (API keys etc.) ---
+.env
+.env.*
+
 # --- IDEs / editors ---
 .idea/
 .project

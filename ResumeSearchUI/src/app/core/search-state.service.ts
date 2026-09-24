@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { Injectable, signal } from '@angular/core';
 import { ResumeApiService } from './api.service';
 import { CandidateDetailResponse, QueryPersonaMatch } from './models';
@@ -38,7 +39,9 @@ export class SearchStateService {
       this.results.set(response.result);
     } catch (err) {
       console.error('Search failed', err);
-      this.errorMessage.set('Search failed - is the backend running at localhost:8000?');
+      // Prefer the backend's own explanation (e.g. LLM misconfigured) when it sent one.
+      const backendMessage = err instanceof HttpErrorResponse ? err.error?.message : undefined;
+      this.errorMessage.set(backendMessage ?? 'Search failed - is the backend running at localhost:8000?');
       this.results.set(null);
     } finally {
       this.loading.set(false);
