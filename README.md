@@ -19,13 +19,16 @@ OpenAI-compatible LLM endpoint · Docker Compose
 
 ## Running it
 
-Backend first:
+Backend first. Put the LLM settings in `ResumeSearchAPI/.env` (gitignored, read automatically by
+Docker Compose) — `OPENAI_API_KEY=...`, or `MOCK_LLM=true` to skip the LLM. Then:
 
 ```powershell
 cd ResumeSearchAPI
-$env:OPENAI_API_KEY = "..."   # or $env:MOCK_LLM = "true" to skip the LLM
-docker compose up --build -d
+docker compose up -d                                  # normal start - reuses the existing image
+docker compose up -d --build; docker image prune -f   # only after changing backend code
 ```
+
+Each `--build` leaves the previous image behind as an untagged `<none>` image; the `prune` removes it.
 
 Then the frontend:
 

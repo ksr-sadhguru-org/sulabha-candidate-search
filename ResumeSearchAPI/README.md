@@ -39,9 +39,11 @@ and doesn't satisfy, independent of which tier found it.
 
 ## Running
 
+Set the variables above in a `.env` file in this folder (gitignored; Compose reads it automatically), then:
+
 ```powershell
-$env:OPENAI_API_KEY = "..."
-docker compose up --build -d
+docker compose up -d                                  # normal start - reuses the existing image
+docker compose up -d --build; docker image prune -f   # after code changes; prune drops the old <none> image
 ```
 
 Runs on port 8000 (Postgres on 5432). Without Docker: `mvn spring-boot:run` against your own Postgres.
