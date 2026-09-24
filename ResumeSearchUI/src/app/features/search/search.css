@@ -34,6 +34,12 @@
   border-radius: 6px;
 }
 
+/* No skill/role match - orange: a warning, distinct from the red filter miss and the blue scores. */
+.chip-none {
+  background: #ffedd5;
+  color: #9a3412;
+}
+
 .details {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

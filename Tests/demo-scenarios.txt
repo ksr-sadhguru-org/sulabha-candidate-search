@@ -35,7 +35,7 @@ Expect: flagged "Already exists" - same resume content, different filename.
 SCENARIO 3 - Full filter match
 -------------------------------
 Query: "Java developer with 6+ years of experience, based in Mumbai"
-Expect: 1 result - Arjun Mehta, java_score ~93, "Matches all filters".
+Expect: 1 result - Arjun Mehta, java_score ~93, full "Filter Match" (green).
 
 
 SCENARIO 4 - Skill match + filter transparency

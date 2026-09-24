@@ -39,11 +39,17 @@
       </div>
 
       <div class="badges-row">
-        @for (entry of scoreEntries(match); track entry[0]) {
-          <span class="chip has-tooltip" [attr.data-tooltip]="'Relevance score for \'' + entry[0] + '\' against the search query'">{{ entry[0] }}: {{ entry[1] }}</span>
+        @if (scoreEntries(match); as entries) {
+          @if (entries.length) {
+            <span class="chip has-tooltip" data-tooltip="Relevance score (0-100) for each requested skill/role, based on relevant experience">
+              Skills Match: {{ formatScores(entries) }}
+            </span>
+          } @else {
+            <span class="chip chip-none has-tooltip" data-tooltip="None of the requested skills/roles are in this candidate's skill profile">Skills Match: None</span>
+          }
         }
         @if (match.filter_status.length) {
-          <!-- Only when the query asked for filters - otherwise "Matches filters" says nothing useful. -->
+          <!-- Only when the query asked for filters - otherwise "Filter Match" says nothing useful. -->
           <span class="badge {{ filterBadgeClass(match) }}">
             {{ filterBadgeLabel(match) }}: {{ filterBadgeDetail(match) }}
           </span>

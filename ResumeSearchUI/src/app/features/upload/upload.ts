@@ -1,4 +1,4 @@
-import { Component, HostListener, signal, viewChildren } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, signal, viewChildren } from '@angular/core';
 import { ResumeApiService } from '../../core/api.service';
 import { ApplicantDetails, DuplicateMatch, EMPTY_APPLICANT_DETAILS } from '../../core/models';
 import { CandidateRecordEditor } from '../../shared/candidate-record-editor/candidate-record-editor';
@@ -42,7 +42,7 @@ export class Upload {
    *  snapshot so a panel that's still extracting when clicked gets waited for instead of silently skipped. */
   private readonly pendingExtractions: Promise<void>[] = [];
 
-  constructor(private readonly api: ResumeApiService) {}
+  constructor(private readonly api: ResumeApiService, private readonly cdr: ChangeDetectorRef) {}
 
   async onFilesSelected(event: Event): Promise<void> {
     const input = event.target as HTMLInputElement;
@@ -164,6 +164,9 @@ export class Upload {
       } finally {
         this.waitingForExtraction.set(false);
       }
+      // Panels that finished extracting just now haven't rendered their editor yet, so editors() below
+      // wouldn't include them and they'd be silently skipped - render first.
+      this.cdr.detectChanges();
     }
     this.savingAll.set(true);
     try {

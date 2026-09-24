@@ -45,24 +45,25 @@ export class Search {
       .sort(([a], [b]) => a.localeCompare(b));
   }
 
-  /** "Matches filters" badge text: distinguishes all-matched, some-matched and none-matched, rather than
-   *  one combined yes/no - so it's clear at a glance whether a candidate misses one filter or all of them. */
+  formatScores(entries: [string, number][]): string {
+    return entries.map(([name, score]) => `${name}: ${score}`).join(', ');
+  }
+
+  /** "Filter Match" badge text. All-matched vs none-matched is told apart by color (green/red) and the
+   *  ✓/✗ details; a partial match also shows its count, so a near-miss is clear at a glance. */
   filterBadgeLabel(match: QueryPersonaMatch): string {
     const total = match.filter_status.length;
     const matchedCount = match.filter_status.filter((f) => f.matched).length;
-    if (matchedCount === total) {
-      return 'Matches all filters';
-    }
-    if (matchedCount === 0) {
-      return "Doesn't match filters";
-    }
-    return `Partially matches filters (${matchedCount}/${total})`;
+    return matchedCount === total || matchedCount === 0 ? 'Filter Match' : `Filter Match (${matchedCount}/${total})`;
   }
 
   filterBadgeClass(match: QueryPersonaMatch): string {
     const total = match.filter_status.length;
     const matchedCount = match.filter_status.filter((f) => f.matched).length;
-    return matchedCount === total ? 'badge-match' : 'badge-partial';
+    if (matchedCount === total) {
+      return 'badge-match';
+    }
+    return matchedCount === 0 ? 'badge-nomatch' : 'badge-partial';
   }
 
   /** Per-field breakdown shown directly in the badge text (not just on hover): which requested filters
