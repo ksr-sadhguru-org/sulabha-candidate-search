@@ -1,0 +1,48 @@
+<h1>Admin</h1>
+<p>Destructive actions for local testing/demo use only.</p>
+
+<div class="card">
+  <h2>Create All Tables</h2>
+  <p class="hint">Safe, idempotent - creates any missing tables. Does nothing if they already exist.</p>
+  <button class="btn-primary" (click)="onCreateAllTables()" [disabled]="creating()">
+    {{ creating() ? 'Creating…' : 'Create All Tables' }}
+  </button>
+</div>
+
+<div class="card danger">
+  <h2>Destructive actions</h2>
+  <p class="hint">
+    Type <code>{{ confirmPhrase }}</code> below to enable the buttons.
+  </p>
+  <div class="field">
+    <input
+      type="text"
+      [value]="confirmText()"
+      (input)="onConfirmTextInput($event)"
+      placeholder="Type {{ confirmPhrase }} to confirm"
+    />
+  </div>
+
+  <div class="actions">
+    <div>
+      <button class="btn-danger" (click)="onClearAllData()" [disabled]="!confirmed || clearing()">
+        {{ clearing() ? 'Clearing…' : 'Clear All Data' }}
+      </button>
+      <p class="hint">Recommended. Empties every table. Schema is never touched.</p>
+    </div>
+
+    <div>
+      <button class="btn-danger" (click)="onDropAllTables()" [disabled]="!confirmed || dropping()">
+        {{ dropping() ? 'Dropping…' : 'Drop All Tables' }}
+      </button>
+      <p class="hint">Matches the backend's raw endpoint exactly - also removes the table schema. Click "Create All Tables" above afterward to rebuild it.</p>
+    </div>
+  </div>
+
+  @if (error()) {
+    <p class="error">{{ error() }}</p>
+  }
+  @if (message()) {
+    <p class="success">{{ message() }}</p>
+  }
+</div>

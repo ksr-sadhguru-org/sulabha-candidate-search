@@ -1,0 +1,46 @@
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.75rem 1.5rem;
+  background: #1e293b;
+  color: white;
+}
+
+.brand {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+nav {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex: 1;
+}
+
+nav a {
+  color: #cbd5e1;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+nav a:hover {
+  color: white;
+}
+
+nav a.active {
+  color: white;
+  font-weight: 600;
+}
+
+.admin-link {
+  margin-left: auto;
+  color: #fca5a5 !important;
+}
+
+.content {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}

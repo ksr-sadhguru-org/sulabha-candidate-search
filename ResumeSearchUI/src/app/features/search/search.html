@@ -1,0 +1,106 @@
+<h1>Search Candidates</h1>
+<p>Describe who you're looking for in plain language - skills, experience, location, anything relevant.</p>
+
+<div class="card">
+  <div class="field">
+    <label for="query">Search query</label>
+    <textarea
+      id="query"
+      rows="3"
+      placeholder="e.g. Senior Full Stack Developer with React and Python experience, 5+ years, based in Coimbatore, Tamil speaking"
+      [value]="state.queryText()"
+      (input)="onQueryInput($event)"
+      (keydown.control.enter)="onSearchShortcut()"
+    ></textarea>
+  </div>
+  <button class="btn-primary" (click)="onSearch()" [disabled]="state.loading() || !state.queryText().trim()">
+    {{ state.loading() ? 'Searching…' : 'Search' }}
+  </button>
+  <span class="hint shortcut-hint">Ctrl+Enter to search</span>
+  @if (state.errorMessage()) {
+    <p class="error">{{ state.errorMessage() }}</p>
+  }
+</div>
+
+@if (state.results() !== null) {
+  <h2>{{ state.results()!.length }} candidate{{ state.results()!.length === 1 ? '' : 's' }} found</h2>
+
+  @if (state.results()!.length === 0) {
+    <p>No candidates matched all the requested skills/roles.</p>
+  }
+
+  @for (match of state.results(); track match.uniquefile_id) {
+    <div class="card result-card">
+      <div class="name-row">
+        <strong>{{ match.name || match.uniquefile_id }}</strong>
+        @if (match.name) {
+          <span class="candidate-id">{{ match.uniquefile_id }}</span>
+        }
+      </div>
+
+      <div class="badges-row">
+        @for (entry of scoreEntries(match); track entry[0]) {
+          <span class="chip has-tooltip" [attr.data-tooltip]="'Relevance score for \'' + entry[0] + '\' against the search query'">{{ entry[0] }}: {{ entry[1] }}</span>
+        }
+        <span class="badge {{ filterBadgeClass(match) }}">
+          {{ filterBadgeLabel(match) }}{{ match.filter_status.length ? ': ' + filterBadgeDetail(match) : '' }}
+        </span>
+        @if (match.matched_via_keyword && match.partial_keyword_match) {
+          <span class="badge badge-keyword-partial has-tooltip" data-tooltip="Matched keyword only appears inside another word (e.g. 'sing' in 'Perusing'), not as a standalone word">
+            Partial keyword match{{ match.matched_keywords.length ? ': ' + match.matched_keywords.join(', ') : '' }}
+          </span>
+        } @else if (match.matched_via_keyword) {
+          <span class="badge badge-keyword has-tooltip" data-tooltip="Also found via exact keyword match on the query text">
+            Keyword match{{ match.matched_keywords.length ? ': ' + match.matched_keywords.join(', ') : '' }}
+          </span>
+        }
+      </div>
+
+      @if (match.experience || match.job_location || match.qualification) {
+        <dl class="details">
+          @if (match.experience) {
+            <div><dt>Experience</dt><dd>{{ match.experience }}</dd></div>
+          }
+          @if (match.qualification) {
+            <div><dt>Qualification</dt><dd>{{ match.qualification }}</dd></div>
+          }
+          @if (match.job_location) {
+            <div><dt>Location</dt><dd>{{ match.job_location }}</dd></div>
+          }
+          @if (match.languages) {
+            <div><dt>Languages</dt><dd>{{ match.languages }}</dd></div>
+          }
+          @if (match.is_meditator) {
+            <div><dt>Meditator</dt><dd>{{ match.is_meditator }}</dd></div>
+          }
+          @if (match.stay_in_ashram) {
+            <div><dt>Stay in ashram</dt><dd>{{ match.stay_in_ashram }}</dd></div>
+          }
+        </dl>
+      }
+
+      <button class="btn-link" (click)="onToggleDetail(match.uniquefile_id)">
+        {{ state.expandedId() === match.uniquefile_id ? 'Hide full record' : 'View full record' }}
+      </button>
+
+      @if (state.expandedId() === match.uniquefile_id) {
+        <div class="detail-panel">
+          @if (state.detailLoadingId() === match.uniquefile_id) {
+            <p>Loading…</p>
+          } @else if (state.detailError()) {
+            <p class="error">{{ state.detailError() }}</p>
+          } @else if (state.detailFor(match.uniquefile_id); as detail) {
+            <app-candidate-record-editor
+              [uniquefileId]="match.uniquefile_id"
+              [idEditable]="false"
+              [initialResumeName]="detail.resume_name"
+              [initialResumeText]="detail.resume_text"
+              [initialApplicantDetails]="detail.applicant_details ?? emptyApplicantDetails"
+              (saved)="onDetailSaved(match.uniquefile_id)"
+            />
+          }
+        </div>
+      }
+    </div>
+  }
+}

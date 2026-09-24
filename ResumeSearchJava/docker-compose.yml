@@ -1,0 +1,52 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - RESUME_DB_NAME=resume_db
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4.1}
+      - OPENAI_QUERY_MODEL=${OPENAI_QUERY_MODEL:-gpt-4.1}
+      - MOCK_LLM=${MOCK_LLM:-false}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - resume_network
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      # Created directly as the app's target database - simpler than the original service's
+      # runtime "connect to postgres, CREATE DATABASE resume_db if missing" step.
+      - POSTGRES_DB=resume_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - resume_network
+
+volumes:
+  postgres_data:
+
+networks:
+  resume_network:
+    driver: bridge

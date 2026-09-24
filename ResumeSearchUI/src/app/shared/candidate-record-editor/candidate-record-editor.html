@@ -1,0 +1,163 @@
+<div class="editable-fields" (input)="onFieldChanged()" (change)="onFieldChanged()" (keydown.control.enter)="onSaveShortcut($event)">
+<div class="field">
+  <label [attr.for]="idEditable() ? 'uniquefileId-' + uniquefileId() : null">Candidate ID</label>
+  @if (idEditable()) {
+    <input id="uniquefileId-{{ uniquefileId() }}" type="text" [(ngModel)]="editableId" />
+  } @else {
+    <div class="readonly-id">{{ editableId }}</div>
+  }
+</div>
+
+<div class="field">
+  <label for="resumeName-{{ uniquefileId() }}">Resume name</label>
+  <input id="resumeName-{{ uniquefileId() }}" type="text" [(ngModel)]="resumeName" />
+</div>
+
+<div class="field">
+  <label for="resumeText-{{ uniquefileId() }}">Resume text</label>
+  <textarea id="resumeText-{{ uniquefileId() }}" rows="14" class="resume-text-input" [(ngModel)]="resumeText"></textarea>
+</div>
+
+<h3>From the resume (AI-suggested - please verify)</h3>
+<div class="grid">
+  <div class="field">
+    <label for="name-{{ uniquefileId() }}">Name</label>
+    <input id="name-{{ uniquefileId() }}" type="text" [(ngModel)]="details.name" />
+  </div>
+  <div class="field">
+    <label for="emailFrom-{{ uniquefileId() }}">Email</label>
+    <input id="emailFrom-{{ uniquefileId() }}" type="text" [(ngModel)]="details.email_from" />
+  </div>
+  <div class="field">
+    <label for="qualification-{{ uniquefileId() }}">Qualification</label>
+    <input id="qualification-{{ uniquefileId() }}" type="text" [(ngModel)]="details.qualification" />
+  </div>
+  <div class="field">
+    <label for="experience-{{ uniquefileId() }}">Experience</label>
+    <input id="experience-{{ uniquefileId() }}" type="text" [attr.list]="'experienceOptions-' + uniquefileId()" [(ngModel)]="details.experience" />
+    <datalist [id]="'experienceOptions-' + uniquefileId()">
+      @for (opt of experienceOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="nationality-{{ uniquefileId() }}">Nationality</label>
+    <input id="nationality-{{ uniquefileId() }}" type="text" [(ngModel)]="details.nationality" />
+  </div>
+  <div class="field">
+    <label for="jobLocation-{{ uniquefileId() }}">Location</label>
+    <input id="jobLocation-{{ uniquefileId() }}" type="text" [(ngModel)]="details.job_location" />
+  </div>
+  <div class="field">
+    <label for="languages-{{ uniquefileId() }}">Languages</label>
+    <input id="languages-{{ uniquefileId() }}" type="text" [(ngModel)]="details.languages" />
+  </div>
+  <div class="field">
+    <label for="linkedinProfile-{{ uniquefileId() }}">LinkedIn</label>
+    <input id="linkedinProfile-{{ uniquefileId() }}" type="text" [(ngModel)]="details.linkedin_profile" />
+  </div>
+  <div class="field">
+    <label for="skillCompetencies-{{ uniquefileId() }}">Skill competencies</label>
+    <input id="skillCompetencies-{{ uniquefileId() }}" type="text" [(ngModel)]="details.skill_competencies" />
+  </div>
+  <div class="field">
+    <label for="otherInterests-{{ uniquefileId() }}">Other interests</label>
+    <input id="otherInterests-{{ uniquefileId() }}" type="text" [(ngModel)]="details.other_interests" />
+  </div>
+  <div class="field">
+    <label for="gender-{{ uniquefileId() }}">Gender</label>
+    <input id="gender-{{ uniquefileId() }}" type="text" [attr.list]="'genderOptions-' + uniquefileId()" [(ngModel)]="details.gender" />
+    <datalist [id]="'genderOptions-' + uniquefileId()">
+      @for (opt of genderOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="maritalStatus-{{ uniquefileId() }}">Marital status</label>
+    <input id="maritalStatus-{{ uniquefileId() }}" type="text" [attr.list]="'maritalStatusOptions-' + uniquefileId()" [(ngModel)]="details.marital_status" />
+    <datalist [id]="'maritalStatusOptions-' + uniquefileId()">
+      @for (opt of maritalStatusOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="dob-{{ uniquefileId() }}">Date of birth</label>
+    <input id="dob-{{ uniquefileId() }}" type="text" [(ngModel)]="details.dob" />
+  </div>
+</div>
+
+<h3>Manual entry (never inferable from a resume)</h3>
+<div class="grid">
+  <div class="field">
+    <label for="address-{{ uniquefileId() }}">Address</label>
+    <input id="address-{{ uniquefileId() }}" type="text" [(ngModel)]="details.address" />
+  </div>
+  <div class="field">
+    <label for="noticePeriod-{{ uniquefileId() }}">Notice period</label>
+    <input id="noticePeriod-{{ uniquefileId() }}" type="text" [attr.list]="'noticePeriodOptions-' + uniquefileId()" [(ngModel)]="details.notice_period" />
+    <datalist [id]="'noticePeriodOptions-' + uniquefileId()">
+      @for (opt of noticePeriodOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="salaryExpected-{{ uniquefileId() }}">Salary expected</label>
+    <input id="salaryExpected-{{ uniquefileId() }}" type="number" [(ngModel)]="details.salary_expected" />
+  </div>
+  <div class="field">
+    <label for="reasonForChange-{{ uniquefileId() }}">Reason for change</label>
+    <input id="reasonForChange-{{ uniquefileId() }}" type="text" [(ngModel)]="details.reason_for_change" />
+  </div>
+  <div class="field">
+    <label for="stayInAshram-{{ uniquefileId() }}">Stay in ashram</label>
+    <input id="stayInAshram-{{ uniquefileId() }}" type="text" [attr.list]="'stayInAshramOptions-' + uniquefileId()" [(ngModel)]="details.stay_in_ashram" />
+    <datalist [id]="'stayInAshramOptions-' + uniquefileId()">
+      @for (opt of stayInAshramOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="anyKindJob-{{ uniquefileId() }}">Open to any kind of job</label>
+    <input id="anyKindJob-{{ uniquefileId() }}" type="text" [attr.list]="'anyKindJobOptions-' + uniquefileId()" [(ngModel)]="details.any_kind_job" />
+    <datalist [id]="'anyKindJobOptions-' + uniquefileId()">
+      @for (opt of anyKindJobOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="durationWithIsha-{{ uniquefileId() }}">Duration with Isha</label>
+    <input id="durationWithIsha-{{ uniquefileId() }}" type="text" [attr.list]="'durationWithIshaOptions-' + uniquefileId()" [(ngModel)]="details.duration_with_isha" />
+    <datalist [id]="'durationWithIshaOptions-' + uniquefileId()">
+      @for (opt of durationWithIshaOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="doneIshaProgram-{{ uniquefileId() }}">Done Isha program</label>
+    <input id="doneIshaProgram-{{ uniquefileId() }}" type="text" [attr.list]="'doneIshaProgramOptions-' + uniquefileId()" [(ngModel)]="details.done_isha_program" />
+    <datalist [id]="'doneIshaProgramOptions-' + uniquefileId()">
+      @for (opt of doneIshaProgramOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="isMeditator-{{ uniquefileId() }}">Is meditator</label>
+    <input id="isMeditator-{{ uniquefileId() }}" type="text" [attr.list]="'isMeditatorOptions-' + uniquefileId()" [(ngModel)]="details.is_meditator" />
+    <datalist [id]="'isMeditatorOptions-' + uniquefileId()">
+      @for (opt of isMeditatorOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="applicantPrograms-{{ uniquefileId() }}">Isha programs attended</label>
+    <input id="applicantPrograms-{{ uniquefileId() }}" type="text" [(ngModel)]="details.applicant_programs" />
+  </div>
+  <div class="field">
+    <label for="jobId-{{ uniquefileId() }}">Job ID</label>
+    <input id="jobId-{{ uniquefileId() }}" type="text" [(ngModel)]="details.job_id" />
+  </div>
+</div>
+</div>
+
+<button class="btn-primary" (click)="save()" [disabled]="submitting() || !resumeText.trim()">
+  {{ submitting() ? 'Saving…' : 'Save' }}
+</button>
+<span class="hint shortcut-hint">Ctrl+Enter to save</span>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+@if (successMessage()) {
+  <p class="success">{{ successMessage() }}</p>
+}

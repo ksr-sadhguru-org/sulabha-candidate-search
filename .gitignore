@@ -1,0 +1,49 @@
+# Legacy Python prototype - superseded, kept locally only, not part of this repo's history
+/ResumeSearch/
+
+# Local test data (may include real candidate resumes) - never committed
+/Sample Resumes/
+
+# Scratch / working files from development sessions
+/Temp/
+*.mp4
+dry-run-duplicate-panel.png
+
+# --- Angular / Node (ResumeSearchUI) ---
+node_modules/
+/ResumeSearchUI/dist
+/ResumeSearchUI/tmp
+/ResumeSearchUI/out-tsc
+/ResumeSearchUI/bazel-out
+/ResumeSearchUI/.angular/cache
+.sass-cache/
+npm-debug.log
+yarn-error.log
+__screenshots__/
+
+# --- Java / Maven (ResumeSearchJava) ---
+/ResumeSearchJava/target/
+*.class
+
+# --- IDEs / editors ---
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+!.vscode/mcp.json
+.history/*
+
+# --- Playwright MCP tool output ---
+.playwright-mcp/
+
+# --- OS files ---
+.DS_Store
+Thumbs.db

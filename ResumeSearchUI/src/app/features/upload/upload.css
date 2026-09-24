@@ -1,0 +1,47 @@
+.save-all-btn {
+  margin-bottom: 1rem;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+}
+
+.panel-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.chevron {
+  color: #64748b;
+}
+
+/* Panel name color tracks lifecycle state: extracting -> ready for review -> edited (dirty) -> saved. */
+.panel-name.state-extracting {
+  color: #94a3b8;
+}
+
+.panel-name.state-error,
+.panel-name.state-save-error {
+  color: #dc2626;
+}
+
+.panel-name.state-ready {
+  color: #2563eb;
+}
+
+.panel-name.state-dirty {
+  color: #d97706;
+}
+
+.panel-name.state-saved {
+  color: #16a34a;
+}
+
+.panel-name.state-duplicate {
+  color: #0e7490;
+}
