@@ -194,16 +194,15 @@ public class QueryService {
                 + match.relatedKeywords().size() * RELATED_KEYWORD_WEIGHT;
     }
 
-    /** The main (last) word of each equivalent the LLM gave for the query's skills/roles, e.g. "Music
-     *  Instructor" -> "instructor" - so the keyword fallback also finds resumes worded differently from the
-     *  query. The main word, not the whole phrase: "music instructor" wouldn't match "Yoga Instructor". */
+    /** The single, distinctive words the LLM chose as alternatives for the query's skills/roles (e.g.
+     *  "instructor" for "Teacher") - so the keyword fallback also finds resumes worded differently from the
+     *  query. The LLM picks them rather than the code guessing a word out of a phrase: the last word of
+     *  "Sanskrit language" is "language", which is in nearly every resume. */
     private static List<String> relatedKeywords(QueryParseResponse parsedQuery, List<String> queryKeywords) {
         return Stream.concat(parsedQuery.skills().stream(), parsedQuery.roles().stream())
-                .flatMap(e -> e.synonyms() == null ? Stream.empty() : e.synonyms().stream())
-                .map(s -> {
-                    List<String> words = WORD_SPLIT.splitAsStream(s.toLowerCase(Locale.ROOT)).filter(w -> !w.isEmpty()).toList();
-                    return words.isEmpty() ? "" : words.get(words.size() - 1);
-                })
+                .flatMap(e -> e.relatedWords() == null ? Stream.empty() : e.relatedWords().stream())
+                .map(w -> w.toLowerCase(Locale.ROOT).strip())
+                .filter(w -> w.matches("[a-z0-9]+")) // single words only - also what keywordMatch requires
                 .filter(w -> w.length() >= MIN_KEYWORD_LENGTH && !STOPWORDS.contains(w) && !queryKeywords.contains(w))
                 .distinct()
                 .toList();

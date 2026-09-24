@@ -52,7 +52,7 @@ public class MockLlmExtractor implements LlmExtractor {
     @Override
     public QueryParseResponse extractFromQuery(String query) {
         List<QueryParseEntity> skills = findSkills(query.toLowerCase(Locale.ROOT)).stream()
-                .map(s -> new QueryParseEntity(s.canonical(), List.of()))
+                .map(s -> new QueryParseEntity(s.canonical(), List.of(), List.of()))
                 .toList();
         return new QueryParseResponse(skills, List.of());
     }

@@ -14,7 +14,8 @@ final class Prompts {
             - Merge a career progression into ONE entry, named by the most senior/current title, with combined
               years (e.g. "Java Developer" 2018-2020 + "Senior Java Developer" 2020-now -> "Senior Java Developer").
             - includes: the skills, tools and earlier job titles this entry is made up of (e.g. "Java", "Spring Boot",
-              "Java Developer"), so the candidate can be found by searching any of them.
+              "Java Developer"), so the candidate can be found by searching any of them. Never list another entry's
+              name in includes (e.g. a "Tabla Player" entry must not include "Music Teacher" if that is its own entry).
             - Skills that are not part of any role get their own entry (e.g. a Java developer who also knows Python).
             - Education: one entry for the highest level (e.g. "Masters"), with its specialization in includes.
             - type: "role" for a profession/job title or education level, "skill" for a standalone skill.
@@ -41,18 +42,17 @@ final class Prompts {
             """;
 
     static final String QUERY_PARSE = """
-            Extract required skills AND, separately, job-title/seniority/education requirements from this
-            HR query, with canonical terms and synonyms for each. These will be matched exactly against a
-            candidate skill/role index, so extract nothing that isn't a genuine technical/soft skill or a
-            job title/seniority/education level.
-            There may be spelling mistakes in the query, so you need to correct them.
+            Extract what this HR query asks for, with canonical terms and synonyms, to match against a candidate
+            skill/role index. Correct any spelling mistakes.
 
-            DEFINITIONS:
-            - skills: Technologies, tools, programming languages, and capabilities required for the position (e.g. "React", "Python", "Team Leadership")
-            - roles: Job titles, seniority levels, and education requirements (e.g. "Senior Developer", "Tech Lead", "Masters")
-            Put each extracted item under whichever key it belongs to - a query can mention only skills, only roles, both, or neither.
+            - skills = MUST-HAVES: the profession/trade and the core abilities asked for (e.g. "Carpenter", "Teacher",
+              "Developer", "Java", "Team Leadership"). A candidate lacking any of these is not a match.
+            - roles = NICE-TO-HAVES that only help ranking: seniority and education (e.g. "Senior", "Lead", "Masters").
+              Split a title accordingly: "Senior Carpenter" -> skills "Carpenter", roles "Senior".
             - synonyms: spelling variants plus close equivalents a resume might use instead (e.g. "Teacher" -> "Tutor",
               "Instructor", "Educator"; "Developer" -> "Programmer", "Software Engineer"). True equivalents only - not related fields.
+            - relatedWords: single words a resume might use instead, specific to this skill/profession (e.g. "Teacher" ->
+              "instructor", "tutor", "educator"). Never generic words like "language", "skills", "management", "services".
 
             EXPLICITLY EXCLUDE all of the following - they are handled by a separate filter, never put them in "skills" or "roles":
             - Years of experience (e.g. "5+ years")
@@ -62,8 +62,9 @@ final class Prompts {
 
             JSON Format:
             {
-              "skills": [{"canonical": "React", "synonyms": ["ReactJS", "React.js"]}],
-              "roles": [{"canonical": "Senior Developer", "synonyms": ["Sr. Developer"]}]
+              "skills": [{"canonical": "Developer", "synonyms": ["Programmer"], "relatedWords": ["programmer", "coder"]},
+                         {"canonical": "React", "synonyms": ["ReactJS"], "relatedWords": ["reactjs"]}],
+              "roles": [{"canonical": "Senior", "synonyms": ["Sr."], "relatedWords": []}]
             }
 
             Return only valid JSON matching the schema above, with keys "skills" and "roles" (empty arrays if none) - without any additional text or formatting.
