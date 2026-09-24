@@ -1,0 +1,71 @@
+SULABHA DEMO SCENARIOS
+======================
+Test resumes used are in: Sample Resumes/test resumes/
+Before running: DELETE http://localhost:8000/clear_all_data (wipes the DB clean)
+
+
+SCENARIO 1 - Bulk upload + manual field review
+-----------------------------------------------
+Go to /upload, select all 7 files at once:
+  - Arjun Mehta - Java Developer.docx
+  - Kavita Nair - Senior Software Engineer.doc
+  - Lakshmi Venkataraman - Sanskrit Teacher.docx
+  - Devi Ramaswamy - Tabla Player and Music Teacher.pdf
+  - Karthik Subramaniam - Yoga and Meditation Instructor.pdf
+  - Ananya Reddy - Content Writer.docx
+  - Ramesh Pillai - Electrician.pdf
+
+For Karthik Subramaniam, manually set (these are never AI-inferred, even though his
+resume text literally says "Meditator: Yes"):
+  Is meditator = Yes, Stay in ashram = Yes, Done Isha program = Yes, Duration with Isha = 5+ Years
+
+For Lakshmi Venkataraman, manually set:
+  Is meditator = Yes, Duration with Isha = 3 ~ 4 Years
+  (leave Stay in ashram blank on purpose - used in Scenario 7)
+
+Save All. Expect: all 7 saved.
+
+
+SCENARIO 2 - Duplicate detection
+---------------------------------
+Upload: Ananya Reddy - Content Writer (Resubmission).docx
+Expect: flagged "Already exists" - same resume content, different filename.
+
+
+SCENARIO 3 - Full filter match
+-------------------------------
+Query: "Java developer with 6+ years of experience, based in Mumbai"
+Expect: 1 result - Arjun Mehta, java_score ~90, "Matches all filters".
+
+
+SCENARIO 4 - Skill match + filter transparency
+------------------------------------------------
+Query: "Senior developer with Python skills in Bangalore"
+Expect: 4 results -
+  Kavita Nair    - python_score match, all filters match (Bangalore)
+  Karthik / Ramesh / Arjun - keyword match only ("senior"/"developer"), filters
+  fail on location (each shows the mismatch explicitly)
+
+
+SCENARIO 5 - Sanskrit teacher search
+--------------------------------------
+Query: "Sanskrit teacher in Coimbatore"
+Expect: Lakshmi Venkataraman ranks first via genuine skill/role match (~95),
+all filters match. (Role is self-registered from her own upload in Scenario 1.)
+
+
+SCENARIO 6 - Tabla player search
+-----------------------------------
+Query: "Looking for a tabla player"
+Expect: Devi Ramaswamy, skill match (~87-89) - works despite typos in her resume
+("Tabla Playr and Music Techer").
+
+
+SCENARIO 7 - Search using manually-entered fields
+-----------------------------------------------------
+Query: "Yoga and meditation instructor in Coimbatore who is a meditator and
+willing to stay in the ashram"
+Expect: 3 results, tiered -
+  Karthik Subramaniam - full match (location + stay in ashram + meditator)
+  Lakshmi Venkataraman - partial match 2/3 (meditator yes, stay in ashram not on file)
+  Ananya Reddy        - partial match 1/3 (only location, via "coimbatore" keyword)
