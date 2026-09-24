@@ -19,10 +19,13 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Stream;
+import java.util.Set;
 
 /** Orchestrates resume ingestion: LLM extraction, synonym normalization, and storage. */
 @Service
@@ -54,11 +57,12 @@ public class CandidateService {
 
             ResumeParseResponse parsed;
             String parsedJson;
-            if (resumeTextUnchanged) {
+            ResumeParseResponse previous = resumeTextUnchanged ? readPreviousParse(existing.get().parsedResumeJson()) : null;
+            if (previous != null) {
                 // Same resume text as last time (e.g. only applicant_details was edited) - reuse the
                 // previously extracted skills/roles instead of paying for another LLM call.
+                parsed = previous;
                 parsedJson = existing.get().parsedResumeJson();
-                parsed = objectMapper.readValue(parsedJson, ResumeParseResponse.class);
                 log.info("resume_text unchanged for {} - skipping LLM re-extraction", request.uniquefileId());
             } else {
                 parsed = llmExtractor.extractFromResume(request.resumeText());
@@ -114,36 +118,71 @@ public class CandidateService {
                 .toList();
     }
 
+    /** Stores each LLM entry once (its own row, display_name = itself) plus one row per name it includes
+     *  (display_name = the entry), all with the entry's single score - so e.g. a search for "java" finds the
+     *  candidate via "Senior Java Developer"'s includes, and the result shows that one entry, once. */
     private void processSkills(String uniquefileId, ResumeParseResponse parsed, List<String> manualSkillNames) {
-        List<ScoredEntity> allSkills = Stream.concat(parsed.explicitSkills().stream(), parsed.impliedSkills().stream()).toList();
-        List<NamedEntity> skillEntities = new ArrayList<>(allSkills.stream().map(s -> new NamedEntity(s.canonical(), s.synonyms())).toList());
-        manualSkillNames.forEach(name -> skillEntities.add(new NamedEntity(name, List.of())));
-        List<NamedEntity> roleEntities = parsed.roles().stream().map(r -> new NamedEntity(r.canonical(), r.synonyms())).toList();
+        // Highest score first, so a name included by two entries is attributed to the stronger one.
+        List<ScoredEntity> items = parsed.items().stream()
+                .sorted(Comparator.comparingInt(ScoredEntity::score).reversed()).toList();
+        // Main entries keep exactly the name the LLM gave them (it's what's displayed); what they include, and
+        // manually declared skills, are normalized as usual so "J2EE" and "Java EE" still end up the same.
+        List<NamedEntity> skillEntries = new ArrayList<>();
+        List<NamedEntity> roleEntries = new ArrayList<>();
+        List<NamedEntity> includedNames = new ArrayList<>();
+        for (ScoredEntity item : items) {
+            (isRole(item) ? roleEntries : skillEntries).add(new NamedEntity(item.canonical(), item.synonyms()));
+            includes(item).forEach(name -> includedNames.add(new NamedEntity(name, List.of())));
+        }
+        manualSkillNames.forEach(name -> includedNames.add(new NamedEntity(name, List.of())));
 
-        Map<String, String> skillsMapping = synonymRepository.normalizeBatch(skillEntities, "skill");
-        Map<String, String> rolesMapping = synonymRepository.normalizeBatch(roleEntities, "role");
+        Map<String, String> entryMapping = new HashMap<>(synonymRepository.registerExact(skillEntries, "skill"));
+        entryMapping.putAll(synonymRepository.registerExact(roleEntries, "role"));
+        Map<String, String> skillsMapping = synonymRepository.normalizeBatch(includedNames, "skill");
 
         List<Object[]> entities = new ArrayList<>();
-        for (ScoredEntity s : allSkills) {
-            String key = synonymRepository.normalize(s.canonical());
-            if (skillsMapping.containsKey(key)) {
-                entities.add(new Object[]{"skill", skillsMapping.get(key), s.score(), s.years()});
+        Set<String> stored = new HashSet<>();
+        for (ScoredEntity item : items) {
+            String main = entryMapping.get(synonymRepository.normalize(item.canonical()));
+            if (main == null || !stored.add(main)) {
+                continue;
+            }
+            entities.add(new Object[]{isRole(item) ? "role" : "skill", main, item.score(), item.years(), main});
+            for (String name : includes(item)) {
+                String included = skillsMapping.get(synonymRepository.normalize(name));
+                if (included != null && stored.add(included)) {
+                    entities.add(new Object[]{"skill", included, item.score(), item.years(), main});
+                }
             }
         }
+        // A manually declared skill the LLM already covered would only add a second, flat-scored duplicate.
         for (String name : manualSkillNames) {
-            String key = synonymRepository.normalize(name);
-            if (skillsMapping.containsKey(key)) {
-                entities.add(new Object[]{"skill", skillsMapping.get(key), MANUAL_SKILL_SCORE, null});
-            }
-        }
-        for (ScoredEntity r : parsed.roles()) {
-            String key = synonymRepository.normalize(r.canonical());
-            if (rolesMapping.containsKey(key)) {
-                entities.add(new Object[]{"role", rolesMapping.get(key), r.score(), r.years()});
+            String skill = skillsMapping.get(synonymRepository.normalize(name));
+            if (skill != null && stored.add(skill)) {
+                entities.add(new Object[]{"skill", skill, MANUAL_SKILL_SCORE, null, skill});
             }
         }
         candidateRepository.addCandidateSearchBatch(uniquefileId, entities);
-        log.info("Successfully processed {} skills and roles ({} manually declared) for resume: {}",
-                entities.size(), manualSkillNames.size(), uniquefileId);
+        log.info("Successfully processed {} entries ({} rows incl. what they include) for resume: {}",
+                items.size(), entities.size(), uniquefileId);
+    }
+
+    /** The stored LLM result for this resume, or null if it predates the current format (no "items") and so
+     *  has to be re-extracted. */
+    private ResumeParseResponse readPreviousParse(String parsedJson) {
+        try {
+            ResumeParseResponse previous = objectMapper.readValue(parsedJson, ResumeParseResponse.class);
+            return previous.items() == null ? null : previous;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private static boolean isRole(ScoredEntity item) {
+        return "role".equalsIgnoreCase(item.type());
+    }
+
+    private static List<String> includes(ScoredEntity item) {
+        return item.includes() == null ? List.of() : item.includes();
     }
 }

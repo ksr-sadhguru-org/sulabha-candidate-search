@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
@@ -95,16 +94,28 @@ public class QueryService {
         if (parsedQuery == null || filters == null) {
             throw new LlmUnavailableException("Search failed: the LLM call failed - check the backend's OPENAI_* settings (API key, base URL, model) and its logs");
         }
-        List<String> requiredSkills = resolveRequired(parsedQuery.skills());
+        List<List<String>> requiredSkills = resolveRequired(parsedQuery.skills());
         List<String> optionalRoles = resolveOptional(parsedQuery.roles());
-        QueryResult skillResults = queryRepository.getQueryResult(requiredSkills, optionalRoles);
+        // A requested skill nobody has (e.g. "C++") means no one can be a skill match - don't fall back to
+        // searching on the roles alone, which would list e.g. every developer as if they had C++.
+        boolean requiredSkillUnknown = !parsedQuery.skills().isEmpty() && requiredSkills.isEmpty();
+        QueryResult skillResults = requiredSkillUnknown
+                ? new QueryResult(List.of())
+                : queryRepository.getQueryResult(requiredSkills, optionalRoles);
 
         List<QueryPersonaMatch> combinedMatches = new ArrayList<>(skillResults.result());
         Set<String> alreadyMatchedIds = new HashSet<>(skillResults.result().stream().map(QueryPersonaMatch::uniquefileId).toList());
-        Map<String, QueryRepository.KeywordMatch> keywordMatches = queryRepository.keywordMatch(extractKeywords(queryText));
+        List<String> queryKeywords = extractKeywords(queryText);
+        List<String> relatedKeywords = relatedKeywords(parsedQuery, queryKeywords);
+        Map<String, QueryRepository.KeywordMatch> keywordMatches = queryRepository.keywordMatch(
+                Stream.concat(queryKeywords.stream(), relatedKeywords.stream()).toList());
         for (Map.Entry<String, QueryRepository.KeywordMatch> entry : keywordMatches.entrySet()) {
             if (alreadyMatchedIds.add(entry.getKey())) {
-                combinedMatches.add(QueryPersonaMatch.keywordOnly(entry.getKey(), entry.getValue().keywords(), entry.getValue().partial()));
+                List<String> hits = entry.getValue().keywords();
+                combinedMatches.add(QueryPersonaMatch.keywordOnly(entry.getKey(),
+                        hits.stream().filter(queryKeywords::contains).toList(),
+                        hits.stream().filter(relatedKeywords::contains).toList(),
+                        entry.getValue().partial()));
             }
         }
 
@@ -145,6 +156,7 @@ public class QueryService {
     private static final double ROLE_KEYWORD_WEIGHT = 2;
     private static final double OTHER_KEYWORD_WEIGHT = 1;
     private static final double FILTER_KEYWORD_WEIGHT = 0.5;
+    private static final double RELATED_KEYWORD_WEIGHT = 0.75;
 
     /** How much each query word counts toward a keyword match, based on what the LLM took it to mean:
      *  part of a skill > part of a role > unclassified > part of a filter value (location, etc. - already
@@ -175,9 +187,26 @@ public class QueryService {
                 .forEach(w -> weights.put(w, weight));
     }
 
-    /** Sum of the matched keywords' weights - 0 for skill-band matches, which have no matched keywords. */
+    /** Sum of the matched keywords' weights - 0 for skill-band matches, which have no matched keywords.
+     *  A related word (the LLM's equivalent, not typed by the user) counts less than any typed word. */
     private static double keywordScore(QueryPersonaMatch match, Map<String, Double> weights) {
-        return match.matchedKeywords().stream().mapToDouble(k -> weights.getOrDefault(k, OTHER_KEYWORD_WEIGHT)).sum();
+        return match.matchedKeywords().stream().mapToDouble(k -> weights.getOrDefault(k, OTHER_KEYWORD_WEIGHT)).sum()
+                + match.relatedKeywords().size() * RELATED_KEYWORD_WEIGHT;
+    }
+
+    /** The main (last) word of each equivalent the LLM gave for the query's skills/roles, e.g. "Music
+     *  Instructor" -> "instructor" - so the keyword fallback also finds resumes worded differently from the
+     *  query. The main word, not the whole phrase: "music instructor" wouldn't match "Yoga Instructor". */
+    private static List<String> relatedKeywords(QueryParseResponse parsedQuery, List<String> queryKeywords) {
+        return Stream.concat(parsedQuery.skills().stream(), parsedQuery.roles().stream())
+                .flatMap(e -> e.synonyms() == null ? Stream.empty() : e.synonyms().stream())
+                .map(s -> {
+                    List<String> words = WORD_SPLIT.splitAsStream(s.toLowerCase(Locale.ROOT)).filter(w -> !w.isEmpty()).toList();
+                    return words.isEmpty() ? "" : words.get(words.size() - 1);
+                })
+                .filter(w -> w.length() >= MIN_KEYWORD_LENGTH && !STOPWORDS.contains(w) && !queryKeywords.contains(w))
+                .distinct()
+                .toList();
     }
 
     /** Splits the raw query into significant words for the keyword fallback - independent of the LLM's
@@ -189,28 +218,28 @@ public class QueryService {
                 .toList();
     }
 
-    /** Resolves each requested skill to a canonical known in the system. AND-required means all of them
-     *  must match - if even one has never been seen on any candidate (no exact or fuzzy synonym match at
-     *  all), the skill/taxonomy path can never satisfy the full requirement, so this returns empty rather
-     *  than silently searching on the subset that did resolve. (The raw-text keyword fallback in
-     *  QueryRepository.keywordMatch still independently catches a textual mention of the unresolved term -
-     *  just honestly labeled as a keyword match, not a precise skill match.) */
-    private List<String> resolveRequired(List<QueryParseEntity> requested) {
+    /** Resolves each requested skill to the group of canonicals it can mean ("teacher" -> every kind of
+     *  teacher). AND-required: a candidate needs at least one canonical from EVERY group - if even one skill
+     *  has never been seen on any candidate (no match at all), the skill/taxonomy path can never satisfy the
+     *  full requirement, so this returns empty rather than silently searching on the subset that did resolve.
+     *  (The raw-text keyword fallback in QueryRepository.keywordMatch still independently catches a textual
+     *  mention of the unresolved term - just honestly labeled as a keyword match, not a precise skill match.) */
+    private List<List<String>> resolveRequired(List<QueryParseEntity> requested) {
         if (requested.isEmpty()) {
             return List.of();
         }
-        Map<String, String> mapping = synonymRepository.lookupBatch(toNamedEntities(requested));
+        Map<String, Set<String>> mapping = synonymRepository.lookupBatch(toNamedEntities(requested));
 
-        List<String> resolved = new ArrayList<>();
+        List<List<String>> groups = new ArrayList<>();
         for (QueryParseEntity entity : requested) {
-            Optional<String> canonical = resolve(entity, mapping);
-            if (canonical.isEmpty()) {
+            List<String> canonicals = resolve(entity, mapping);
+            if (canonicals.isEmpty()) {
                 log.info("Requested skill '{}' has no known match in the system - skill/taxonomy search returns no results", entity.canonical());
                 return List.of();
             }
-            resolved.add(canonical.get());
+            groups.add(canonicals);
         }
-        return resolved.stream().distinct().toList();
+        return groups.stream().distinct().toList();
     }
 
     /** Resolves each requested role/title to a canonical known in the system, same as resolveRequired but
@@ -220,20 +249,23 @@ public class QueryService {
         if (requested.isEmpty()) {
             return List.of();
         }
-        Map<String, String> mapping = synonymRepository.lookupBatch(toNamedEntities(requested));
+        Map<String, Set<String>> mapping = synonymRepository.lookupBatch(toNamedEntities(requested));
         return requested.stream()
-                .map(entity -> resolve(entity, mapping))
-                .flatMap(Optional::stream)
+                .flatMap(entity -> resolve(entity, mapping).stream())
                 .distinct()
                 .toList();
     }
 
-    private Optional<String> resolve(QueryParseEntity entity, Map<String, String> mapping) {
+    /** Every canonical any of the entity's names (canonical + synonyms, incl. LLM-supplied related terms) maps to. */
+    private List<String> resolve(QueryParseEntity entity, Map<String, Set<String>> mapping) {
         return Stream.concat(entity.synonyms().stream(), Stream.of(entity.canonical()))
                 .map(synonymRepository::normalize)
                 .map(mapping::get)
                 .filter(Objects::nonNull)
-                .findFirst();
+                .flatMap(Set::stream)
+                .distinct()
+                .sorted()
+                .toList();
     }
 
     private List<NamedEntity> toNamedEntities(List<QueryParseEntity> entities) {

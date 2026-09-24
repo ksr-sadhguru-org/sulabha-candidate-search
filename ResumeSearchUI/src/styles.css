@@ -114,6 +114,12 @@ textarea, input[type='text'] {
   color: #5b21b6;
 }
 
+/* Teal: same kind of match as the violet keyword badge, but via an equivalent word, not the query's own. */
+.badge-keyword-related {
+  background: #ccfbf1;
+  color: #115e59;
+}
+
 .badge-keyword-partial {
   background: #f1f5f9;
   color: #475569;

@@ -36,17 +36,15 @@ export class Search {
     this.state.setQueryText((event.target as HTMLTextAreaElement).value);
   }
 
-  /** Optional (role/title) attributes are pivoted alongside required skills so they can be scored when
-   *  present, but a candidate without one gets a null score for it - filtered out here rather than
-   *  showing an empty "x_score:" chip. */
+  /** One entry per area of expertise that matched (e.g. "senior java developer"), strongest first. */
   scoreEntries(match: QueryPersonaMatch): [string, number][] {
     return Object.entries(match.scores)
       .filter((entry): entry is [string, number] => entry[1] != null)
-      .sort(([a], [b]) => a.localeCompare(b));
+      .sort(([, a], [, b]) => b - a);
   }
 
   formatScores(entries: [string, number][]): string {
-    return entries.map(([name, score]) => `${name}: ${score}`).join(', ');
+    return entries.map(([name, score]) => `${name} (score: ${score})`).join(', ');
   }
 
   /** "Filter Match" badge text. All-matched vs none-matched is told apart by color (green/red) and the

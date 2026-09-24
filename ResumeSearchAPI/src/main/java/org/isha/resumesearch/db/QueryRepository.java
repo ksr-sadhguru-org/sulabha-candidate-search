@@ -87,42 +87,65 @@ public class QueryRepository {
     public record KeywordMatch(List<String> keywords, boolean partial) {
     }
 
-    /** Pivots candidate_search scores per requested attribute. A candidate must have ALL of
-     *  requiredAttributes (skills) to qualify; optionalAttributes (roles/titles) are scored/shown when
+    /** Pivots candidate_search scores per requested attribute. A candidate must have at least one canonical
+     *  from EVERY requiredGroups entry (one group per requested skill) to qualify; optionalAttributes (roles/titles) are scored/shown when
      *  present but don't gate inclusion - job-title wording varies too much across resumes to treat a
      *  role term as a hard requirement the way a specific technical skill is. */
-    public QueryResult getQueryResult(List<String> requiredAttributes, List<String> optionalAttributes) {
-        List<String> attributeList = Stream.concat(requiredAttributes.stream(), optionalAttributes.stream())
+    public QueryResult getQueryResult(List<List<String>> requiredGroups, List<String> optionalAttributes) {
+        List<String> attributeList = Stream.concat(requiredGroups.stream().flatMap(List::stream), optionalAttributes.stream())
                 .distinct().toList();
         if (attributeList.isEmpty()) {
             return new QueryResult(List.of());
         }
-        List<String> aliases = attributeList.stream().map(a -> a.replace(" ", "_") + "_score").toList();
-
         Map<String, Object> params = new LinkedHashMap<>();
         params.put("attributeList", attributeList);
 
+        // Positional aliases (s0/d0, s1/d1, ...) because a canonical can contain characters that aren't valid in
+        // an identifier ("c++", "child-centered teaching"). d = the entry the matched row belongs to (display_name).
         StringBuilder sql = new StringBuilder("SELECT uniquefile_id");
         for (int i = 0; i < attributeList.size(); i++) {
-            sql.append(", MAX(CASE WHEN canonical = :attr").append(i).append(" THEN score END) AS ").append(aliases.get(i));
+            sql.append(", MAX(CASE WHEN canonical = :attr").append(i).append(" THEN score END) AS s").append(i)
+                    .append(", MAX(CASE WHEN canonical = :attr").append(i).append(" THEN COALESCE(display_name, canonical) END) AS d").append(i);
             params.put("attr" + i, attributeList.get(i));
         }
         sql.append(" FROM candidate_search WHERE canonical IN (:attributeList) GROUP BY uniquefile_id");
-        if (!requiredAttributes.isEmpty()) {
-            sql.append(" HAVING COUNT(DISTINCT CASE WHEN canonical IN (:requiredAttributes) THEN canonical END) = :havingCount");
-            params.put("requiredAttributes", requiredAttributes);
-            params.put("havingCount", requiredAttributes.size());
+
+        // Each required skill is a group of canonicals it can mean ("teacher" -> music/sanskrit/... teacher):
+        // a candidate needs at least one from every group, and ranks by their best score in each group.
+        List<String> groupBest = new ArrayList<>();
+        List<String> groupYears = new ArrayList<>();
+        for (int g = 0; g < requiredGroups.size(); g++) {
+            params.put("group" + g, requiredGroups.get(g));
+            groupBest.add("MAX(CASE WHEN canonical IN (:group" + g + ") THEN score END)");
+            groupYears.add("COALESCE(MAX(CASE WHEN canonical IN (:group" + g + ") THEN years END), 0)");
+        }
+        if (!groupBest.isEmpty()) {
+            sql.append(" HAVING ").append(groupBest.stream().map(b -> b + " IS NOT NULL").collect(Collectors.joining(" AND ")));
+        }
+        List<String> orderBy = new ArrayList<>();
+        if (!groupBest.isEmpty()) {
+            orderBy.add("(" + String.join(" + ", groupBest) + ") DESC");
+        }
+        if (!optionalAttributes.isEmpty()) {
+            params.put("optional", optionalAttributes);
+            orderBy.add("MAX(CASE WHEN canonical IN (:optional) THEN score END) DESC NULLS LAST");
+            groupYears.add("COALESCE(MAX(CASE WHEN canonical IN (:optional) THEN years END), 0)");
         }
         // Equal scores are common (the LLM rounds coarsely), so fall back to years of experience relevant to
         // the requested items - more precise than the score, and per item, so unrelated career years never count.
-        sql.append(" ORDER BY ").append(aliases.stream().map(a -> a + " DESC").collect(Collectors.joining(", ")))
-                .append(", SUM(years) DESC NULLS LAST");
+        // MAX per group, not SUM: an entry's included rows all carry its years, so SUM would count them repeatedly.
+        orderBy.add("(" + String.join(" + ", groupYears) + ") DESC");
+        sql.append(" ORDER BY ").append(String.join(", ", orderBy));
 
         List<QueryPersonaMatch> matches = jdbcClient.sql(sql.toString()).params(params).query((rs, rowNum) -> {
+            // One chip entry per entry the matched rows belong to - "java", "java developer" and "senior java
+            // developer" matched for the same candidate all show as "senior java developer" once.
             Map<String, Integer> scores = new LinkedHashMap<>();
-            for (String alias : aliases) {
-                Object raw = rs.getObject(alias);
-                scores.put(alias, raw == null ? null : (int) Math.round(((Number) raw).doubleValue()));
+            for (int i = 0; i < attributeList.size(); i++) {
+                Object raw = rs.getObject("s" + i);
+                if (raw != null) {
+                    scores.merge(rs.getString("d" + i), (int) Math.round(((Number) raw).doubleValue()), Math::max);
+                }
             }
             return QueryPersonaMatch.skillOnly(rs.getString("uniquefile_id"), scores);
         }).list();

@@ -7,30 +7,35 @@ final class Prompts {
     }
 
     static final String RESUME_PARSE = """
-            Extract skills and roles from this resume. Correct any spelling mistakes.
+            Extract the candidate's areas of expertise from this resume. Correct any spelling mistakes.
 
-            WHAT TO EXTRACT (each with a canonical name and common synonyms):
-            - explicitSkills: technologies, tools, languages and capabilities named in the resume, plus education
-              specializations (e.g. "ITI in House Wiring" -> "House Wiring")
-            - impliedSkills: skills evident from the work described (e.g. "Managed a team of 5" -> "Team Leadership")
-            - roles: job titles/seniority held, plus the highest education level (e.g. "Senior Developer", "Masters")
+            WHAT TO RETURN - one entry per area of expertise, each with a canonical name and synonyms (other names
+            for the same thing only, e.g. "Sr. Java Developer" - never skills or earlier titles, those go in includes):
+            - Merge a career progression into ONE entry, named by the most senior/current title, with combined
+              years (e.g. "Java Developer" 2018-2020 + "Senior Java Developer" 2020-now -> "Senior Java Developer").
+            - includes: the skills, tools and earlier job titles this entry is made up of (e.g. "Java", "Spring Boot",
+              "Java Developer"), so the candidate can be found by searching any of them.
+            - Skills that are not part of any role get their own entry (e.g. a Java developer who also knows Python).
+            - Education: one entry for the highest level (e.g. "Masters"), with its specialization in includes.
+            - type: "role" for a profession/job title or education level, "skill" for a standalone skill.
 
-            SCORING - judge each item on its own:
-            - years: years of experience relevant to THIS item. Count only work where the resume shows it was used;
-              unrelated work counts for nothing (8 years of plumbing adds 0 to "Java"). Closely related work in the
-              same stack counts half (Kotlin toward "Java"). Don't double-count overlapping jobs. 0 if never used.
+            SCORING - one score per entry, judged on that entry alone:
+            - years: years of experience relevant to this entry. Unrelated work counts for nothing (8 years of
+              plumbing adds 0 to a Java entry); closely related work counts half. Don't double-count overlapping jobs.
             - score (0-100), from those years: 10+ -> 93-97, 6-10 -> 85-92, 3-6 -> 75-84, 1-3 -> 65-74,
               under 1 or academic only -> 55-64, listed but no evidence of use -> 45-54.
               Then +0 to +3 for a relevant degree/certification, -5 to -10 if not used in the last 5 years.
-            - Education-level roles are scored by level: PhD 95-100, Masters 85-94, Bachelors 75-84, Diploma 65-74,
+            - Education entries are scored by level: PhD 95-100, Masters 85-94, Bachelors 75-84, Diploma 65-74,
               High School 55-64, other 45-54.
 
             Return only this JSON, with no other text:
-            {
-              "explicitSkills": [{"canonical": "Python", "synonyms": ["Python Programming"], "score": 85, "years": 6}],
-              "impliedSkills": [{"canonical": "Team Leadership", "synonyms": ["People Management"], "score": 76, "years": 3}],
-              "roles": [{"canonical": "Senior Full Stack Developer", "synonyms": ["Sr. Full Stack Developer"], "score": 88, "years": 7}]
-            }
+            {"items": [
+              {"type": "role", "canonical": "Senior Java Developer", "synonyms": ["Sr. Java Developer"], "score": 90,
+               "years": 8, "includes": ["Java", "Java Developer", "Spring Boot", "REST APIs", "Microservices"]},
+              {"type": "skill", "canonical": "Python", "synonyms": [], "score": 68, "years": 2, "includes": []},
+              {"type": "role", "canonical": "Bachelors", "synonyms": ["B.E."], "score": 80, "years": 0,
+               "includes": ["Computer Science"]}
+            ]}
 
             Resume Text: "%s"
             """;
@@ -46,6 +51,8 @@ final class Prompts {
             - skills: Technologies, tools, programming languages, and capabilities required for the position (e.g. "React", "Python", "Team Leadership")
             - roles: Job titles, seniority levels, and education requirements (e.g. "Senior Developer", "Tech Lead", "Masters")
             Put each extracted item under whichever key it belongs to - a query can mention only skills, only roles, both, or neither.
+            - synonyms: spelling variants plus close equivalents a resume might use instead (e.g. "Teacher" -> "Tutor",
+              "Instructor", "Educator"; "Developer" -> "Programmer", "Software Engineer"). True equivalents only - not related fields.
 
             EXPLICITLY EXCLUDE all of the following - they are handled by a separate filter, never put them in "skills" or "roles":
             - Years of experience (e.g. "5+ years")

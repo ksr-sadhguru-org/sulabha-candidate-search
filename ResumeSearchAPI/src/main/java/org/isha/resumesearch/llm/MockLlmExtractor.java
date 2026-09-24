@@ -9,6 +9,7 @@ import org.isha.resumesearch.dto.ScoredEntity;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.regex.Matcher;
@@ -40,11 +41,12 @@ public class MockLlmExtractor implements LlmExtractor {
     public ResumeParseResponse extractFromResume(String resumeText) {
         String lower = resumeText.toLowerCase(Locale.ROOT);
         int eduScore = educationScore(lower);
-        List<ScoredEntity> explicitSkills = findSkills(lower);
-        List<ScoredEntity> impliedSkills = (lower.contains("led a team") || lower.contains("team of"))
-                ? List.of(new ScoredEntity("Team Leadership", List.of(), eduScore, null))
-                : List.of();
-        return new ResumeParseResponse(explicitSkills, impliedSkills, List.of(role(lower, eduScore)));
+        List<ScoredEntity> items = new ArrayList<>(findSkills(lower));
+        if (lower.contains("led a team") || lower.contains("team of")) {
+            items.add(new ScoredEntity("skill", "Team Leadership", List.of(), eduScore, null, List.of()));
+        }
+        items.add(role(lower, eduScore));
+        return new ResumeParseResponse(items);
     }
 
     @Override
@@ -121,7 +123,7 @@ public class MockLlmExtractor implements LlmExtractor {
     private List<ScoredEntity> findSkills(String lowerText) {
         return SKILL_KEYWORDS.stream()
                 .filter(kw -> lowerText.contains(kw.toLowerCase(Locale.ROOT)))
-                .map(kw -> new ScoredEntity(kw, List.of(), 80, null))
+                .map(kw -> new ScoredEntity("skill", kw, List.of(), 80, null, List.of()))
                 .toList();
     }
 
@@ -141,7 +143,7 @@ public class MockLlmExtractor implements LlmExtractor {
         } else {
             title = "Software Developer";
         }
-        return new ScoredEntity(title, List.of(), score, null);
+        return new ScoredEntity("role", title, List.of(), score, null, List.of());
     }
 
     private String capitalize(String s) {

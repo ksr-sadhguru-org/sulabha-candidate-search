@@ -86,6 +86,8 @@ export interface QueryPersonaMatch {
   scores: Record<string, number | null>;
   matched_via_keyword: boolean;
   matched_keywords: string[];
+  /** The LLM's equivalents of query words that matched (e.g. "instructor" for "teacher"). */
+  related_keywords: string[];
   partial_keyword_match: boolean;
   matches_application_filters: boolean;
   filter_status: FilterFieldStatus[];

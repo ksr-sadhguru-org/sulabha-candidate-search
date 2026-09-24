@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -78,35 +79,87 @@ public class SynonymRepository {
     }
 
     /**
+     * Registers each entity under exactly its OWN name (plus its synonyms, for query-time lookup) - unlike
+     * normalizeBatch, never merges it into another canonical that happens to share a synonym. Used for a resume's
+     * main entries, whose name is what's displayed: "Java Developer" must stay that, even if another resume's
+     * "Senior Java Developer" listed "java developer" among its synonyms. Returns each entity's name -> canonical.
+     */
+    public Map<String, String> registerExact(List<NamedEntity> entities, String entityType) {
+        Map<String, String> result = new HashMap<>();
+        for (NamedEntity entity : entities) {
+            String canonical = normalize(entity.canonical());
+            result.put(canonical, canonical);
+            for (String syn : expandedSynonyms(entity)) {
+                jdbcClient.sql("""
+                                INSERT INTO entity_synonyms (entity_type, canonical, synonym)
+                                VALUES (:entityType, :canonical, :synonym)
+                                ON CONFLICT (entity_type, canonical, synonym) DO NOTHING
+                                """)
+                        .param("entityType", entityType).param("canonical", canonical).param("synonym", syn)
+                        .update();
+            }
+        }
+        return result;
+    }
+
+    /**
      * Query-time lookup only: no entity_type filter and no new canonicals created (matches normalize_entities_batch_query).
-     * Falls back to substring matching for terms with no exact match (e.g. searching "office" should still
+     * Each term maps to ALL canonicals it means (exact synonym hits plus head-word matches, see below).
+     * Terms with neither fall back to substring matching (e.g. searching "office" should still
      * find the stored skill "microsoft office"/synonym "ms office") - but only when that fallback is
      * unambiguous, i.e. the term's substring only appears in synonyms of a single canonical. A generic term
      * that partially matches several unrelated skills is left unmatched rather than resolved arbitrarily.
      * Anything still unmatched after that gets one more try against canonical names by suffix-stripped
      * root (see lookupByCanonicalRoot) - e.g. "plumber" finds the registered canonical "plumbing".
      */
-    public Map<String, String> lookupBatch(List<NamedEntity> entities) {
+    public Map<String, Set<String>> lookupBatch(List<NamedEntity> entities) {
         if (entities.isEmpty()) {
             return Map.of();
         }
         Set<String> allSynonyms = entities.stream().flatMap(e -> expandedSynonyms(e).stream()).collect(Collectors.toSet());
-        Map<String, String> exact = lookup(allSynonyms, null);
+        List<String> canonicals = allCanonicals();
 
-        Set<String> unmatched = allSynonyms.stream().filter(s -> !exact.containsKey(s)).collect(Collectors.toSet());
-        if (unmatched.isEmpty()) {
-            return exact;
+        // A term can mean several canonicals: every exact synonym hit, plus every canonical the term is the
+        // head word of - a general term covers its specializations ("teacher" -> "music teacher",
+        // "sanskrit teacher"; "developer" -> "java developer"). Whole words only, so "java" != "javascript".
+        Map<String, Set<String>> combined = new HashMap<>();
+        lookupAll(allSynonyms).forEach((term, found) -> combined.computeIfAbsent(term, k -> new HashSet<>()).addAll(found));
+        for (String term : allSynonyms) {
+            for (String canonical : canonicals) {
+                if (canonical.equals(term) || canonical.endsWith(" " + term)) {
+                    combined.computeIfAbsent(term, k -> new HashSet<>()).add(canonical);
+                }
+            }
         }
 
-        Map<String, String> combined = new HashMap<>(exact);
+        Set<String> unmatched = allSynonyms.stream().filter(s -> !combined.containsKey(s)).collect(Collectors.toSet());
+        if (unmatched.isEmpty()) {
+            return combined;
+        }
         Map<String, String> fuzzy = lookupFuzzyUnambiguous(unmatched);
-        combined.putAll(fuzzy);
+        fuzzy.forEach((term, canonical) -> combined.put(term, Set.of(canonical)));
 
         Set<String> stillUnmatched = unmatched.stream().filter(s -> !fuzzy.containsKey(s)).collect(Collectors.toSet());
         if (!stillUnmatched.isEmpty()) {
-            combined.putAll(lookupByCanonicalRoot(stillUnmatched));
+            lookupByCanonicalRoot(stillUnmatched, canonicals).forEach((term, canonical) -> combined.put(term, Set.of(canonical)));
         }
         return combined;
+    }
+
+    private List<String> allCanonicals() {
+        return jdbcClient.sql("SELECT DISTINCT canonical FROM entity_synonyms").query(String.class).list();
+    }
+
+    /** Every canonical each synonym is registered under - the same word can be registered under more than
+     *  one (e.g. "teacher" under both the role "sanskrit teacher" and the skill "teaching"). */
+    private Map<String, Set<String>> lookupAll(Set<String> synonyms) {
+        Map<String, Set<String>> result = new HashMap<>();
+        jdbcClient.sql("SELECT canonical, synonym FROM entity_synonyms WHERE synonym IN (:synonyms)")
+                .param("synonyms", synonyms)
+                .query((rs, rowNum) -> Map.entry(rs.getString("synonym"), rs.getString("canonical")))
+                .list()
+                .forEach(e -> result.computeIfAbsent(e.getKey(), k -> new HashSet<>()).add(e.getValue()));
+        return result;
     }
 
     private Map<String, String> lookupFuzzyUnambiguous(Set<String> terms) {
@@ -140,10 +193,7 @@ public class SynonymRepository {
      *  the often free-text/descriptive synonym rows, e.g. "project manager (plumbing & fire fighting)" -
      *  matching against those would pull in unrelated canonicals just because they happen to mention the
      *  word) via a shared suffix-stripped root, unambiguous only. */
-    private Map<String, String> lookupByCanonicalRoot(Set<String> terms) {
-        List<String> canonicals = jdbcClient.sql("SELECT DISTINCT canonical FROM entity_synonyms")
-                .query(String.class)
-                .list();
+    private Map<String, String> lookupByCanonicalRoot(Set<String> terms, List<String> canonicals) {
         Map<String, List<String>> canonicalsByRoot = new HashMap<>();
         for (String canonical : canonicals) {
             canonicalsByRoot.computeIfAbsent(wordRoot(canonical), k -> new ArrayList<>()).add(canonical);

@@ -10,6 +10,7 @@ public record QueryPersonaMatch(
         Map<String, Integer> scores,
         boolean matchedViaKeyword,
         List<String> matchedKeywords,
+        List<String> relatedKeywords,
         boolean partialKeywordMatch,
         boolean matchesApplicationFilters,
         List<FilterFieldStatus> filterStatus,
@@ -17,18 +18,21 @@ public record QueryPersonaMatch(
 ) {
     /** A skill-match row before it's been enriched with application data. */
     public static QueryPersonaMatch skillOnly(String uniquefileId, Map<String, Integer> scores) {
-        return new QueryPersonaMatch(uniquefileId, scores, false, List.of(), false, true, List.of(), null);
+        return new QueryPersonaMatch(uniquefileId, scores, false, List.of(), List.of(), false, true, List.of(), null);
     }
 
     /** A candidate found only via the raw-text keyword fallback, not the curated skill/role taxonomy.
      *  {@code partialKeywordMatch} is true when none of the matched keywords landed on a whole word - e.g.
-     *  "sing" only ever appeared as a substring inside "Perusing", never as a standalone word. */
-    public static QueryPersonaMatch keywordOnly(String uniquefileId, List<String> matchedKeywords, boolean partialKeywordMatch) {
-        return new QueryPersonaMatch(uniquefileId, Map.of(), true, matchedKeywords, partialKeywordMatch, true, List.of(), null);
+     *  "sing" only ever appeared as a substring inside "Perusing", never as a standalone word.
+     *  {@code matchedKeywords} are words from the query itself; {@code relatedKeywords} are the LLM's
+     *  equivalents of them (e.g. "instructor" for "teacher"), which rank lower. */
+    public static QueryPersonaMatch keywordOnly(String uniquefileId, List<String> matchedKeywords, List<String> relatedKeywords,
+                                                boolean partialKeywordMatch) {
+        return new QueryPersonaMatch(uniquefileId, Map.of(), true, matchedKeywords, relatedKeywords, partialKeywordMatch, true, List.of(), null);
     }
 
     public QueryPersonaMatch withApplicationData(boolean matchesFilters, List<FilterFieldStatus> filterStatus, ApplicationDataRow row) {
-        return new QueryPersonaMatch(uniquefileId, scores, matchedViaKeyword, matchedKeywords, partialKeywordMatch, matchesFilters, filterStatus, row);
+        return new QueryPersonaMatch(uniquefileId, scores, matchedViaKeyword, matchedKeywords, relatedKeywords, partialKeywordMatch, matchesFilters, filterStatus, row);
     }
 
     /** One requested application filter's outcome for this candidate - only present for fields the query
