@@ -49,9 +49,6 @@ export class Search {
    *  one combined yes/no - so it's clear at a glance whether a candidate misses one filter or all of them. */
   filterBadgeLabel(match: QueryPersonaMatch): string {
     const total = match.filter_status.length;
-    if (total === 0) {
-      return match.matches_application_filters ? 'Matches filters' : 'Skills only';
-    }
     const matchedCount = match.filter_status.filter((f) => f.matched).length;
     if (matchedCount === total) {
       return 'Matches all filters';
@@ -64,9 +61,6 @@ export class Search {
 
   filterBadgeClass(match: QueryPersonaMatch): string {
     const total = match.filter_status.length;
-    if (total === 0) {
-      return match.matches_application_filters ? 'badge-match' : 'badge-partial';
-    }
     const matchedCount = match.filter_status.filter((f) => f.matched).length;
     return matchedCount === total ? 'badge-match' : 'badge-partial';
   }

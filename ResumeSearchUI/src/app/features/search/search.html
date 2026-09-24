@@ -42,9 +42,12 @@
         @for (entry of scoreEntries(match); track entry[0]) {
           <span class="chip has-tooltip" [attr.data-tooltip]="'Relevance score for \'' + entry[0] + '\' against the search query'">{{ entry[0] }}: {{ entry[1] }}</span>
         }
-        <span class="badge {{ filterBadgeClass(match) }}">
-          {{ filterBadgeLabel(match) }}{{ match.filter_status.length ? ': ' + filterBadgeDetail(match) : '' }}
-        </span>
+        @if (match.filter_status.length) {
+          <!-- Only when the query asked for filters - otherwise "Matches filters" says nothing useful. -->
+          <span class="badge {{ filterBadgeClass(match) }}">
+            {{ filterBadgeLabel(match) }}: {{ filterBadgeDetail(match) }}
+          </span>
+        }
         @if (match.matched_via_keyword && match.partial_keyword_match) {
           <span class="badge badge-keyword-partial has-tooltip" data-tooltip="Matched keyword only appears inside another word (e.g. 'sing' in 'Perusing'), not as a standalone word">
             Partial keyword match{{ match.matched_keywords.length ? ': ' + match.matched_keywords.join(', ') : '' }}

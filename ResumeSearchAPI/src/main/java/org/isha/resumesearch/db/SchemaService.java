@@ -38,8 +38,10 @@ public class SchemaService {
         jdbcClient.sql("""
                 CREATE TABLE IF NOT EXISTS candidate_search (
                     id SERIAL PRIMARY KEY, uniquefile_id VARCHAR(255), entity_type VARCHAR(50),
-                    canonical VARCHAR(255), score REAL, created_date TIMESTAMP, updated_date TIMESTAMP
+                    canonical VARCHAR(255), score REAL, years REAL, created_date TIMESTAMP, updated_date TIMESTAMP
                 )""").update();
+        // Added after the table first shipped - upgrades databases created before it existed.
+        jdbcClient.sql("ALTER TABLE candidate_search ADD COLUMN IF NOT EXISTS years REAL").update();
 
         jdbcClient.sql("""
                 CREATE TABLE IF NOT EXISTS entity_synonyms (

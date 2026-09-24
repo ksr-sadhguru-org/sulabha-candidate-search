@@ -7,37 +7,30 @@ final class Prompts {
     }
 
     static final String RESUME_PARSE = """
-            Extract skills and industry roles from this resume with canonical terms, synonyms, and scoring based on education level.
-            There may be spelling mistakes in the resume, so you need to correct them.
+            Extract skills and roles from this resume. Correct any spelling mistakes.
 
-            DEFINITIONS:
-            - Skills: Technologies, tools, languages, and capabilities (explicitly mentioned or inferred from work experience)
-            - Industry Roles: Job titles, positions, seniority levels from experience, and highest education level as role (e.g., "Senior Developer", "Tech Lead", "Graduate", "Masters", "PhD")
+            WHAT TO EXTRACT (each with a canonical name and common synonyms):
+            - explicitSkills: technologies, tools, languages and capabilities named in the resume, plus education
+              specializations (e.g. "ITI in House Wiring" -> "House Wiring")
+            - impliedSkills: skills evident from the work described (e.g. "Managed a team of 5" -> "Team Leadership")
+            - roles: job titles/seniority held, plus the highest education level (e.g. "Senior Developer", "Masters")
 
-            JSON Format:
+            SCORING - judge each item on its own:
+            - years: years of experience relevant to THIS item. Count only work where the resume shows it was used;
+              unrelated work counts for nothing (8 years of plumbing adds 0 to "Java"). Closely related work in the
+              same stack counts half (Kotlin toward "Java"). Don't double-count overlapping jobs. 0 if never used.
+            - score (0-100), from those years: 10+ -> 93-97, 6-10 -> 85-92, 3-6 -> 75-84, 1-3 -> 65-74,
+              under 1 or academic only -> 55-64, listed but no evidence of use -> 45-54.
+              Then +0 to +3 for a relevant degree/certification, -5 to -10 if not used in the last 5 years.
+            - Education-level roles are scored by level: PhD 95-100, Masters 85-94, Bachelors 75-84, Diploma 65-74,
+              High School 55-64, other 45-54.
+
+            Return only this JSON, with no other text:
             {
-              "explicitSkills": [{"canonical": "Python", "synonyms": ["Python Programming"], "score": 85}],
-              "impliedSkills": [{"canonical": "Team Leadership", "synonyms": ["People Management"], "score": 80}],
-              "roles": [{"canonical": "Senior Full Stack Developer", "synonyms": ["Sr. Full Stack Developer"], "score": 90}]
+              "explicitSkills": [{"canonical": "Python", "synonyms": ["Python Programming"], "score": 85, "years": 6}],
+              "impliedSkills": [{"canonical": "Team Leadership", "synonyms": ["People Management"], "score": 76, "years": 3}],
+              "roles": [{"canonical": "Senior Full Stack Developer", "synonyms": ["Sr. Full Stack Developer"], "score": 88, "years": 7}]
             }
-
-            SCORING GUIDELINES:
-            - Education-based scoring: Use highest education level percentage as base score
-              * PhD: 95-100
-              * Masters: 85-94
-              * Graduate/Bachelors: 75-84
-              * Diploma: 65-74
-              * High School: 55-64
-              * Others: 45-54
-            - Skills: Extract explicitly mentioned skills, infer skills from work experience context, and extract education specializations
-              * Work experience examples: "Managed a team of 5 developers" -> "Team Leadership", "People Management"
-              * Work experience examples: "Built REST APIs" -> "API Development", "Backend Development"
-              * Education examples: "Mechanical Engineering" -> "Mechanical Engineering", "ITI in House Wiring" -> "House Wiring"
-            - Roles: Extract job titles from experience and highest education level as role
-            - Experience bonus: Add 5-15 points for relevant work experience
-            - Recency bonus: Add 5-10 points for recent experience (last 2 years)
-
-            Return only valid JSON matching the schema above, with keys explicitSkills, impliedSkills, roles - without any additional text or formatting.
 
             Resume Text: "%s"
             """;

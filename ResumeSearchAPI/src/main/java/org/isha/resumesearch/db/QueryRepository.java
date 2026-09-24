@@ -113,7 +113,10 @@ public class QueryRepository {
             params.put("requiredAttributes", requiredAttributes);
             params.put("havingCount", requiredAttributes.size());
         }
-        sql.append(" ORDER BY ").append(aliases.stream().map(a -> a + " DESC").collect(Collectors.joining(", ")));
+        // Equal scores are common (the LLM rounds coarsely), so fall back to years of experience relevant to
+        // the requested items - more precise than the score, and per item, so unrelated career years never count.
+        sql.append(" ORDER BY ").append(aliases.stream().map(a -> a + " DESC").collect(Collectors.joining(", ")))
+                .append(", SUM(years) DESC NULLS LAST");
 
         List<QueryPersonaMatch> matches = jdbcClient.sql(sql.toString()).params(params).query((rs, rowNum) -> {
             Map<String, Integer> scores = new LinkedHashMap<>();

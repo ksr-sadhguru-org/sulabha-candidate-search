@@ -127,19 +127,19 @@ public class CandidateService {
         for (ScoredEntity s : allSkills) {
             String key = synonymRepository.normalize(s.canonical());
             if (skillsMapping.containsKey(key)) {
-                entities.add(new Object[]{"skill", skillsMapping.get(key), s.score()});
+                entities.add(new Object[]{"skill", skillsMapping.get(key), s.score(), s.years()});
             }
         }
         for (String name : manualSkillNames) {
             String key = synonymRepository.normalize(name);
             if (skillsMapping.containsKey(key)) {
-                entities.add(new Object[]{"skill", skillsMapping.get(key), MANUAL_SKILL_SCORE});
+                entities.add(new Object[]{"skill", skillsMapping.get(key), MANUAL_SKILL_SCORE, null});
             }
         }
         for (ScoredEntity r : parsed.roles()) {
             String key = synonymRepository.normalize(r.canonical());
             if (rolesMapping.containsKey(key)) {
-                entities.add(new Object[]{"role", rolesMapping.get(key), r.score()});
+                entities.add(new Object[]{"role", rolesMapping.get(key), r.score(), r.years()});
             }
         }
         candidateRepository.addCandidateSearchBatch(uniquefileId, entities);

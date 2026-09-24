@@ -35,7 +35,7 @@ Expect: flagged "Already exists" - same resume content, different filename.
 SCENARIO 3 - Full filter match
 -------------------------------
 Query: "Java developer with 6+ years of experience, based in Mumbai"
-Expect: 1 result - Arjun Mehta, java_score ~90, "Matches all filters".
+Expect: 1 result - Arjun Mehta, java_score ~93, "Matches all filters".
 
 
 SCENARIO 4 - Skill match + filter transparency
@@ -57,7 +57,7 @@ all filters match. (Role is self-registered from her own upload in Scenario 1.)
 SCENARIO 6 - Tabla player search
 -----------------------------------
 Query: "Looking for a tabla player"
-Expect: Devi Ramaswamy, skill match (~87-89) - works despite typos in her resume
+Expect: Devi Ramaswamy, skill match (~95+) - works despite typos in her resume
 ("Tabla Playr and Music Techer").
 
 

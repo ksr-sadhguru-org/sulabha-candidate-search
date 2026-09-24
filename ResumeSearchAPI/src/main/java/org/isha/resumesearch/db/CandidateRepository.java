@@ -91,10 +91,10 @@ public class CandidateRepository {
     public void addCandidateSearchBatch(String uniquefileId, List<Object[]> entities) {
         for (Object[] e : entities) {
             jdbcClient.sql("""
-                            INSERT INTO candidate_search (uniquefile_id, entity_type, canonical, score, created_date, updated_date)
-                            VALUES (:id, :entityType, :canonical, :score, NOW(), NOW())
+                            INSERT INTO candidate_search (uniquefile_id, entity_type, canonical, score, years, created_date, updated_date)
+                            VALUES (:id, :entityType, :canonical, :score, :years, NOW(), NOW())
                             """)
-                    .param("id", uniquefileId).param("entityType", e[0]).param("canonical", e[1]).param("score", e[2])
+                    .param("id", uniquefileId).param("entityType", e[0]).param("canonical", e[1]).param("score", e[2]).param("years", e[3])
                     .update();
         }
         log.info("Stored {} entities for uniquefile_id: {}", entities.size(), uniquefileId);

@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
@@ -109,12 +110,18 @@ public class QueryService {
 
         QueryResult joinedResult = queryRepository.leftJoinWithApplicationData(new QueryResult(combinedMatches), filters);
         // Three bands, strongest match first: skill/taxonomy match, then full keyword match, then partial
-        // keyword match (e.g. "sing" only ever found inside "Perusing"). Within each band, candidates who
-        // also satisfy the application filters are shown before those who don't.
+        // keyword match (e.g. "sing" only ever found inside "Perusing"). Within the keyword bands, a hit on
+        // a skill/role word outranks one on a mere filter value (e.g. "java" beats "coimbatore"). Then
+        // candidates who satisfy all application filters come first, then those who satisfy more of them.
+        Map<String, Double> keywordWeights = keywordWeights(parsedQuery, filters);
         Comparator<QueryPersonaMatch> byMatchBand = Comparator.comparingInt(QueryService::matchBandRank);
+        Comparator<QueryPersonaMatch> byKeywordImportance = Comparator.comparingDouble(
+                (QueryPersonaMatch m) -> keywordScore(m, keywordWeights)).reversed();
         Comparator<QueryPersonaMatch> byFilterMatch = Comparator.comparing(QueryPersonaMatch::matchesApplicationFilters).reversed();
+        Comparator<QueryPersonaMatch> byFiltersMatchedCount = Comparator.comparingLong(
+                (QueryPersonaMatch m) -> m.filterStatus().stream().filter(QueryPersonaMatch.FilterFieldStatus::matched).count()).reversed();
         List<QueryPersonaMatch> ordered = joinedResult.result().stream()
-                .sorted(byMatchBand.thenComparing(byFilterMatch))
+                .sorted(byMatchBand.thenComparing(byKeywordImportance).thenComparing(byFilterMatch).thenComparing(byFiltersMatchedCount))
                 .toList();
         QueryResult finalResult = new QueryResult(ordered);
 
@@ -132,6 +139,45 @@ public class QueryService {
             return 0;
         }
         return match.partialKeywordMatch() ? 2 : 1;
+    }
+
+    private static final double SKILL_KEYWORD_WEIGHT = 3;
+    private static final double ROLE_KEYWORD_WEIGHT = 2;
+    private static final double OTHER_KEYWORD_WEIGHT = 1;
+    private static final double FILTER_KEYWORD_WEIGHT = 0.5;
+
+    /** How much each query word counts toward a keyword match, based on what the LLM took it to mean:
+     *  part of a skill > part of a role > unclassified > part of a filter value (location, etc. - already
+     *  checked by the filters themselves, so a hit on it alone says little about fit). Words missing from
+     *  the map weigh OTHER_KEYWORD_WEIGHT. */
+    private static Map<String, Double> keywordWeights(QueryParseResponse parsedQuery, ApplicationFilterResponse filters) {
+        Map<String, Double> weights = new HashMap<>();
+        // Lowest weight first, so a word that's both (e.g. a skill that's also in a filter) keeps the higher one.
+        filters.asValues().forEach(v -> addWords(weights, v, FILTER_KEYWORD_WEIGHT));
+        parsedQuery.roles().forEach(e -> addEntityWords(weights, e, ROLE_KEYWORD_WEIGHT));
+        parsedQuery.skills().forEach(e -> addEntityWords(weights, e, SKILL_KEYWORD_WEIGHT));
+        return weights;
+    }
+
+    private static void addEntityWords(Map<String, Double> weights, QueryParseEntity entity, double weight) {
+        addWords(weights, entity.canonical(), weight);
+        if (entity.synonyms() != null) {
+            entity.synonyms().forEach(s -> addWords(weights, s, weight));
+        }
+    }
+
+    private static void addWords(Map<String, Double> weights, String phrase, double weight) {
+        if (phrase == null) {
+            return;
+        }
+        WORD_SPLIT.splitAsStream(phrase.toLowerCase(Locale.ROOT))
+                .filter(w -> !w.isEmpty())
+                .forEach(w -> weights.put(w, weight));
+    }
+
+    /** Sum of the matched keywords' weights - 0 for skill-band matches, which have no matched keywords. */
+    private static double keywordScore(QueryPersonaMatch match, Map<String, Double> weights) {
+        return match.matchedKeywords().stream().mapToDouble(k -> weights.getOrDefault(k, OTHER_KEYWORD_WEIGHT)).sum();
     }
 
     /** Splits the raw query into significant words for the keyword fallback - independent of the LLM's

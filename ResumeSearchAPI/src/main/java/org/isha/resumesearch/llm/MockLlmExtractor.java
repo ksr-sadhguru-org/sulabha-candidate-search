@@ -42,7 +42,7 @@ public class MockLlmExtractor implements LlmExtractor {
         int eduScore = educationScore(lower);
         List<ScoredEntity> explicitSkills = findSkills(lower);
         List<ScoredEntity> impliedSkills = (lower.contains("led a team") || lower.contains("team of"))
-                ? List.of(new ScoredEntity("Team Leadership", List.of(), eduScore))
+                ? List.of(new ScoredEntity("Team Leadership", List.of(), eduScore, null))
                 : List.of();
         return new ResumeParseResponse(explicitSkills, impliedSkills, List.of(role(lower, eduScore)));
     }
@@ -121,7 +121,7 @@ public class MockLlmExtractor implements LlmExtractor {
     private List<ScoredEntity> findSkills(String lowerText) {
         return SKILL_KEYWORDS.stream()
                 .filter(kw -> lowerText.contains(kw.toLowerCase(Locale.ROOT)))
-                .map(kw -> new ScoredEntity(kw, List.of(), 80))
+                .map(kw -> new ScoredEntity(kw, List.of(), 80, null))
                 .toList();
     }
 
@@ -141,7 +141,7 @@ public class MockLlmExtractor implements LlmExtractor {
         } else {
             title = "Software Developer";
         }
-        return new ScoredEntity(title, List.of(), score);
+        return new ScoredEntity(title, List.of(), score, null);
     }
 
     private String capitalize(String s) {
