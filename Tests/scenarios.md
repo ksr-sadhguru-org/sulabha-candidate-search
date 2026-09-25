@@ -12,6 +12,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | Spoken language (E6) | LLM decides from context: "French translator" -> skill; "accountant who speaks Tamil" -> filter. A resume showing work in a language gets an entry for it |
 | Location | LLM resolves a city to "City, State, Country" (e.g. "Coimbatore, Tamil Nadu, India"), in the form pre-fill and in query filters |
 | Adjacent jobs | Jobs next to each other in the same field (electrician / electrical engineer, software developer / QA engineer, music teacher / vocalist) appear for each other as related matches, ranked below direct matches. Jobs from another field never do (music teacher / maths teacher, software developer / land developer) |
+| Adjacent examples confirmed | An accountant without Tally may appear for a Tally search - only as a related match, ranked lower. Teacher, tutor, instructor and trainer are equivalent words for a teaching role |
 | Skill competencies | Form field lists years per skill: `Java (2 years), Spring Boot (4 years)`. Human-editable; search uses these years |
 | Skill with no years | Defaults to the candidate's overall years (filled by the LLM, or at save for skills added by hand) |
 | Years in a query | Tied to a skill/profession ("python developer with 8+ years") -> that skill's years. Years alone ("10+ years experience") -> overall experience field |
@@ -104,7 +105,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | ID | Query | Expected |
 |---|---|---|
 | G1 | senior developer with java skills in indore | All Java developers; seniors higher; location no match for all (E10) |
-| G2 | Person who knows Tally software and is in Pune | Tally users; Pune first; accountants without Tally are not skill matches |
+| G2 | Person who knows Tally software and is in Pune | Tally users; Pune first; accountants without Tally only as related, ranked lower |
 | G3 | Candidate who knows Java and is in Pune | Anyone with Java (developer, tester, trainer); Pune first |
 | G4 | Candidate who is an electrical engineer and is in coimbatore and is a meditator | Electrical engineers first, tiered by location + meditator; electricians only as related, below |
 | G5 | candidate who knows sanskrit and is a teacher | Sanskrit teacher first; Sanskrit counts as a skill here |

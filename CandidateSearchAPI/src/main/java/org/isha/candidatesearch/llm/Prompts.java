@@ -52,7 +52,7 @@ final class Prompts {
               "java"; "c# .net developer" -> "c#", ".net developer"). "Knows X" -> "x" alone.
               term: lowercase, singular, as a resume would write it ("tally", not "tally software").
               alternatives: close equivalents and product variants a resume might use instead ("teacher" -> "tutor",
-              "instructor"; "tally" -> "tallyprime", "tally erp 9"), plus the core skill of the job written as a skill,
+              "instructor", "trainer"; "tally" -> "tallyprime", "tally erp 9"), plus the core skill of the job written as a skill,
               with its own equivalents ("python developer" -> "python", "python programming"; "plumber" -> "plumbing",
               "pipe fitting"; "electrician" -> "electrical wiring", "house wiring"; "music teacher" -> "music",
               "vocal music"), plus adjacent jobs in the same field, which rank lower ("software engineer" -> "qa engineer",

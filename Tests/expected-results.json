@@ -56,7 +56,7 @@
   ],
 
   "queries": [
-    { "id": "C1", "q": "teacher", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan"], "not_skill_match": ["Rohan Kulkarni"] },
+    { "id": "C1", "q": "teacher", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan", "Suresh Babu"], "not_skill_match": ["Rohan Kulkarni"] },
     { "id": "C2", "q": "music teacher", "first": ["Meenakshi Sundaram"], "not_skill_match": ["Saraswati Iyer", "Revathi Krishnan"] },
     { "id": "C3", "q": "tutor", "include": ["Geetha Ramachandran"] },
     { "id": "C3", "q": "yoga instructor", "first": ["Harish Chandran"] },
@@ -101,14 +101,14 @@
     { "id": "F4", "q": "Node.js", "include": ["Farhan Ali"] },
 
     { "id": "G1", "q": "senior developer with java skills in indore", "first": ["Rohan Kulkarni"], "include": ["Sneha Joshi", "Vikram Patil", "Sanjay Verma", "Deepa Nair"], "order": [["Rohan Kulkarni", "Vikram Patil"]], "filters": { "Rohan Kulkarni": { "location": "fail" } } },
-    { "id": "G2", "q": "Person who knows Tally software and is in Pune", "first": ["Pooja Agarwal"], "include": ["Rakesh Jain"], "order": [["Pooja Agarwal", "Rakesh Jain"]], "not_skill_match": ["Kavya Subramanian"], "filters": { "Pooja Agarwal": { "location": "pass" }, "Rakesh Jain": { "location": "fail" } } },
+    { "id": "G2", "q": "Person who knows Tally software and is in Pune", "first": ["Pooja Agarwal"], "include": ["Rakesh Jain"], "order": [["Pooja Agarwal", "Rakesh Jain"]], "related_below": ["Kavya Subramanian"], "filters": { "Pooja Agarwal": { "location": "pass" }, "Rakesh Jain": { "location": "fail" } } },
     { "id": "G3", "q": "Candidate who knows Java and is in Pune", "first": ["Rohan Kulkarni", "Priya Menon"], "include": ["Sneha Joshi", "Suresh Babu", "Deepa Nair"], "filters": { "Rohan Kulkarni": { "location": "pass" }, "Priya Menon": { "location": "pass" }, "Sneha Joshi": { "location": "fail" } } },
     { "id": "G4", "q": "Candidate who is an electrical engineer and is in coimbatore and is a meditator", "first": ["Senthil Kumar"], "include": ["Divya Raghavan"], "related_below": ["Murugan Selvam"], "filters": { "Senthil Kumar": { "location": "pass", "is_meditator": "pass" }, "Divya Raghavan": { "location": "fail", "is_meditator": "not_on_file" } } },
     { "id": "G5", "q": "candidate who knows sanskrit and is a teacher", "first": ["Saraswati Iyer"], "not_skill_match": ["Meenakshi Sundaram", "Revathi Krishnan"] },
     { "id": "G6", "q": "Music teacher", "first": ["Meenakshi Sundaram"], "not_skill_match": ["Saraswati Iyer", "Revathi Krishnan", "Geetha Ramachandran"] },
     { "id": "G7", "q": "Plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
     { "id": "G8", "q": "Electrician", "first": ["Murugan Selvam"], "related_below": ["Senthil Kumar", "Divya Raghavan"] },
-    { "id": "G9", "q": "teachers", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan"], "same_results_as": "teacher" },
+    { "id": "G9", "q": "teachers", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan", "Suresh Babu"], "same_results_as": "teacher" },
     { "id": "G10", "q": "Candidate who is willing to stay in ashram", "first": ["Harish Chandran", "Saraswati Iyer"], "exclude": ["Muthu Pandian"] },
     { "id": "G11", "q": "python developer with 8+ years experience in Coimbatore who is also an Isha meditator", "first": ["Anil Sharma"], "order": [["Anil Sharma", "Kiran Rao"]], "filters": { "Anil Sharma": { "experience": "pass", "location": "pass", "is_meditator": "pass" }, "Kiran Rao": { "experience": "fail", "location": "pass", "is_meditator": "pass" } } }
   ]
