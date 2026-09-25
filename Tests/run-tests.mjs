@@ -1,7 +1,10 @@
-// End-to-end check of the running API against expected-results.json: clears the database, uploads every test
-// resume (setting the manual form fields), then verifies each upload and query check.
-// Usage (API running on localhost:8000): node Tests/run-tests.mjs [--skip-upload] [--only=G1,C2]
-// WARNING: without --skip-upload this deletes ALL data in the API's database.
+// End-to-end check of the running API (localhost:8000) against expected-results.json.
+// By default it reuses the data already loaded and only runs the checks. Reset only what a change needs:
+//   --fresh                         clear ALL data, upload every test resume (after upload/profile changes)
+//   --reupload="Deepa Nair,Kiran Rao"  delete and re-upload just these people's resumes
+//   --clear-cache                   forget saved query readings first (after query prompt changes)
+//   --only=G1,C2                    run only these scenario IDs
+// Checks that need the special uploads (B1, B2, A10) run only with --fresh; otherwise they are skipped.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -11,12 +14,15 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(HERE, 'Candidate Resumes for Tests');
 const spec = JSON.parse(fs.readFileSync(path.join(HERE, 'expected-results.json'), 'utf8'));
 const args = process.argv.slice(2);
-const skipUpload = args.includes('--skip-upload');
+const fresh = args.includes('--fresh');
+const clearCache = args.includes('--clear-cache');
+const reupload = (args.find(a => a.startsWith('--reupload=')) || '').slice(11).split(',').map(n => n.trim()).filter(Boolean);
 const only = (args.find(a => a.startsWith('--only=')) || '').slice(7).split(',').filter(Boolean);
 const LATER = ['Rohan Kulkarni - Senior Java Developer (Resubmission).docx', 'Vikram Patil - Java Developer (Updated).docx', 'Scanned Resume - Unreadable.pdf'];
 
 const personOf = file => file.split(' - ')[0];
 const results = [];
+const skip = (id, label) => console.log(`SKIP ${id} ${label} (needs --fresh)`);
 const record = (id, label, ok, detail = '') => { results.push({ id, label, ok, detail }); console.log(`${ok ? 'PASS' : 'FAIL'} ${id} ${label}${ok ? '' : '  -> ' + detail}`); };
 
 async function call(method, url, body, isForm) {
@@ -50,16 +56,25 @@ async function pool(items, n, fn) {
 
 // ---------- upload phase ----------
 const later = {};
-if (!skipUpload) {
-  await call('DELETE', '/clear_all_data');
-  const files = fs.readdirSync(DIR).filter(f => !LATER.includes(f));
-  console.log(`Uploading ${files.length} resumes...`);
+const uploadAll = async files => {
   const t0 = Date.now();
-  const ups = await pool(files, 4, async f => { const r = await uploadOne(f); console.log(`  ${r.upload?.status ? 'saved' : 'NOT saved'} ${f} ${r.upload?.message ?? JSON.stringify(r.extract?.json ?? r.duplicate)}`); return r; });
-  console.log(`Uploaded in ${Math.round((Date.now() - t0) / 1000)}s`);
+  const ups = await pool(files.filter(f => !LATER.includes(f)), 4, async f => { const r = await uploadOne(f); console.log(`  ${r.upload?.status ? 'saved' : 'NOT saved'} ${f} ${r.upload?.message ?? JSON.stringify(r.extract?.json ?? r.duplicate)}`); return r; });
+  for (const f of LATER.filter(f => files.includes(f))) later[f] = await uploadOne(f);
+  console.log(`Uploaded ${files.length} file(s) in ${Math.round((Date.now() - t0) / 1000)}s`);
+  return ups;
+};
+if (fresh) {
+  await call('DELETE', '/clear_all_data');
+  const ups = await uploadAll(fs.readdirSync(DIR));
   record('F2', 'bulk upload: all saved', ups.every(u => u.upload?.status), ups.filter(u => !u.upload?.status).map(u => u.file).join(', '));
-  for (const f of LATER) later[f] = await uploadOne(f);
+} else if (reupload.length) {
+  const onFile = (await call('GET', '/candidates')).json.filter(c => reupload.includes(personOf(c.resume_name)));
+  for (const c of onFile) await call('DELETE', `/candidates/${c.candidate_id}`);
+  const files = fs.readdirSync(DIR).filter(f => reupload.includes(personOf(f)));
+  console.log(`Re-uploading ${reupload.join(', ')}: removed ${onFile.length} record(s), uploading ${files.length} file(s)`);
+  await uploadAll(files);
 }
+if (clearCache) console.log('Query cache cleared:', (await call('DELETE', '/query_cache')).json.cleared_queries, 'saved queries');
 
 const list = (await call('GET', '/candidates')).json;
 const idToPerson = Object.fromEntries(list.map(c => [c.candidate_id, personOf(c.resume_name)]));
@@ -83,13 +98,15 @@ for (const u of spec.uploads) {
   if (only.length && !only.includes(u.id)) continue;
   const label = u.candidate ?? u.file ?? JSON.stringify(u.candidate_count ?? u.order_by_score);
   try {
+    if ((u.expect === 'already_exists' || u.expect_error) && !later[u.file]) { skip(u.id, u.file); continue; }
     if (u.expect === 'already_exists') {
       const r = later[u.file]; record(u.id, `${u.file} flagged as duplicate`, !!r?.duplicate, JSON.stringify(r)); continue;
     }
     if (u.expect_error) {
       const r = later[u.file]; record(u.id, `${u.file} rejected with a message`, r?.extract?.status === 400, JSON.stringify(r?.extract ?? r)); continue;
     }
-    if (u.expect === 'updated_existing') {
+    if (u.expect === 'updated_existing' && !later[u.file]) skip(u.id, `${u.file} updates existing`);
+    else if (u.expect === 'updated_existing') {
       const r = later[u.file]; record(u.id, `${u.file} updates existing`, !!r?.upload?.updated_existing, JSON.stringify(r?.upload));
     }
     if (u.candidate_count) for (const [p, n] of Object.entries(u.candidate_count)) {
@@ -157,6 +174,11 @@ for (const c of spec.queries) {
     if (c.not_skill_match) {
       const bad = c.not_skill_match.filter(p => { const i = names.indexOf(p); return i >= 0 && ['profile', 'related'].includes(r.results[i].match_type); });
       record(c.id, `${tag} no skill match for ${c.not_skill_match.join(', ')}`, !bad.length, `skill-matched ${bad} | ${brief}`);
+    }
+    if (c.related_below) {
+      const direct = names.filter((_, i) => r.results[i].match_type === 'profile').length;
+      const bad = c.related_below.filter(p => { const i = names.indexOf(p); return i >= 0 && (r.results[i].match_type === 'profile' || i < direct); });
+      record(c.id, `${tag} ${c.related_below.join(', ')} only as related, below direct matches`, !bad.length, `misplaced ${bad} | ${brief}`);
     }
     for (const [a, b] of c.order ?? []) {
       const ia = names.indexOf(a), ib = names.indexOf(b);

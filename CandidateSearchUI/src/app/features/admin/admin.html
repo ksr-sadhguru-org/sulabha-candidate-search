@@ -9,6 +9,14 @@
   </button>
 </div>
 
+<div class="card">
+  <h2>Clear Query Cache</h2>
+  <p class="hint">Safe - forgets how past searches were read, so the next searches are read afresh by the AI. Candidates are kept.</p>
+  <button class="btn-primary" (click)="onClearQueryCache()" [disabled]="clearingCache()">
+    {{ clearingCache() ? 'Clearing…' : 'Clear Query Cache' }}
+  </button>
+</div>
+
 <div class="card danger">
   <h2>Destructive actions</h2>
   <p class="hint">
@@ -39,10 +47,11 @@
     </div>
   </div>
 
-  @if (error()) {
-    <p class="error">{{ error() }}</p>
-  }
-  @if (message()) {
-    <p class="success">{{ message() }}</p>
-  }
 </div>
+
+@if (error()) {
+  <p class="error">{{ error() }}</p>
+}
+@if (message()) {
+  <p class="success">{{ message() }}</p>
+}

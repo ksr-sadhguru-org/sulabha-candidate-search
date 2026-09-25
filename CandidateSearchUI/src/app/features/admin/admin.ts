@@ -16,6 +16,7 @@ export class Admin {
   readonly clearing = signal(false);
   readonly dropping = signal(false);
   readonly creating = signal(false);
+  readonly clearingCache = signal(false);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
 
@@ -66,6 +67,22 @@ export class Admin {
       this.error.set('Failed to drop tables - is the backend running at localhost:8000?');
     } finally {
       this.dropping.set(false);
+    }
+  }
+
+  /** Safe: forgets saved query readings so the next searches are read afresh; no candidate data is touched. */
+  async onClearQueryCache(): Promise<void> {
+    this.clearingCache.set(true);
+    this.error.set(null);
+    this.message.set(null);
+    try {
+      const response = await this.api.clearQueryCache();
+      this.message.set(`${response.message} (${response.cleared_queries} saved queries)`);
+    } catch (err) {
+      console.error('Clear query cache failed', err);
+      this.error.set('Failed to clear the query cache - is the backend running at localhost:8000?');
+    } finally {
+      this.clearingCache.set(false);
     }
   }
 

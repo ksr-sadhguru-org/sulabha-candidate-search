@@ -82,6 +82,10 @@ public class CandidateService {
                 candidates.findForm(id).orElse(EMPTY_FORM), expertise.findByCandidate(id)));
     }
 
+    public boolean delete(String id) {
+        return candidates.delete(id);
+    }
+
     public List<CandidateSummary> list() {
         return candidates.listAll();
     }

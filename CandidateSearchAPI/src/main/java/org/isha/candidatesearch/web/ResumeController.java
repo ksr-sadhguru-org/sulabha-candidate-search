@@ -1,6 +1,7 @@
 package org.isha.candidatesearch.web;
 
 import jakarta.validation.Valid;
+import org.isha.candidatesearch.db.QueryCacheRepository;
 import org.isha.candidatesearch.db.SchemaService;
 import org.isha.candidatesearch.dto.ApplicantDetails;
 import org.isha.candidatesearch.dto.BulkUploadResult;
@@ -34,15 +35,17 @@ public class ResumeController {
     private final BulkIngestService bulk;
     private final SearchService search;
     private final SchemaService schema;
+    private final QueryCacheRepository queryCache;
     private final ResumeTextExtractor extractor;
     private final LlmClient llm;
 
     public ResumeController(CandidateService candidates, BulkIngestService bulk, SearchService search, SchemaService schema,
-                            ResumeTextExtractor extractor, LlmClient llm) {
+                            QueryCacheRepository queryCache, ResumeTextExtractor extractor, LlmClient llm) {
         this.candidates = candidates;
         this.bulk = bulk;
         this.search = search;
         this.schema = schema;
+        this.queryCache = queryCache;
         this.extractor = extractor;
         this.llm = llm;
     }
@@ -84,9 +87,23 @@ public class ResumeController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No candidate " + id));
     }
 
+    @DeleteMapping("/candidates/{id}")
+    public Map<String, String> delete(@PathVariable String id) {
+        if (!candidates.delete(id)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No candidate " + id);
+        }
+        return Map.of("message", "Deleted candidate " + id);
+    }
+
     @PostMapping("/query")
     public SearchResponse query(@Valid @RequestBody QueryRequest request) {
         return search.search(request.query());
+    }
+
+    /** Forgets saved query readings only - use after a query prompt change; candidates are kept. */
+    @DeleteMapping("/query_cache")
+    public Map<String, Object> clearQueryCache() {
+        return Map.of("message", "Cleared the query cache", "cleared_queries", queryCache.clear());
     }
 
     @DeleteMapping("/clear_all_data")

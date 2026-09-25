@@ -20,6 +20,11 @@ public class QueryCacheRepository {
                 .param("key", key).query(String.class).optional();
     }
 
+    /** Forgets every saved query reading (e.g. after a query prompt change); candidates are untouched. */
+    public int clear() {
+        return jdbc.sql("DELETE FROM query_cache").update();
+    }
+
     public void save(String key, String parsedJson) {
         jdbc.sql("INSERT INTO query_cache (query_key, parsed_json) VALUES (:key, :json) ON CONFLICT (query_key) DO NOTHING")
                 .param("key", key).param("json", parsedJson).update();

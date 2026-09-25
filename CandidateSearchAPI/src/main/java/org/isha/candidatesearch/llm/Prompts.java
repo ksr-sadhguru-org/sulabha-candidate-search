@@ -18,8 +18,10 @@ final class Prompts {
             - terms: lowercase words and phrases an HR search might use that this entry proves: the name, synonyms,
               abbreviations, the plain profession ("java developer" for "Senior Java Developer"), both trade forms
               ("plumber" and "plumbing"), earlier titles, and the skills and tools used ("java", "spring boot"), with a
-              tool's base name too ("tally" for "TallyPrime"). Never a different profession (an electrical engineer is
-              not an "electrician").
+              tool's base name too ("tally" for "TallyPrime"), and the field-level name of the role ("software developer"
+              and "software engineer" for any programming role; "musician" and "carnatic music" for a Carnatic music
+              teacher). Never a bare generic word ("developer", "engineer", "teacher") and never a different profession
+              (an electrical engineer is not an "electrician"; a land developer is not a "software developer").
             - years: years of experience relevant to this entry only. Unrelated work counts 0, closely related work half,
               academic use 0.5. Don't double-count overlapping jobs.
             - lastUsedYear: the last year this was used (the current year if ongoing).
@@ -31,7 +33,8 @@ final class Prompts {
             Return only this JSON:
             {"totalYears": 9, "entries": [
               {"name": "Senior Java Developer", "kind": "profession", "years": 9, "lastUsedYear": 2026, "score": null,
-               "terms": ["senior java developer", "sr java developer", "java developer", "java", "spring boot", "microservices"]},
+               "terms": ["senior java developer", "sr java developer", "java developer", "software developer",
+                         "software engineer", "java", "spring boot", "microservices"]},
               {"name": "Python", "kind": "skill", "years": 2, "lastUsedYear": 2024, "score": null, "terms": ["python"]},
               {"name": "Bachelors", "kind": "education", "years": 0, "lastUsedYear": null, "score": 80,
                "terms": ["bachelors", "b.e.", "bachelor of engineering", "computer engineering"]}
@@ -50,7 +53,11 @@ final class Prompts {
               term: lowercase, singular, as a resume would write it ("tally", not "tally software").
               alternatives: close equivalents, the trade's other form and product variants a resume might use instead
               ("teacher" -> "tutor", "instructor"; "plumber" -> "plumbing"; "tally" -> "tallyprime", "tally erp 9"),
-              never a different profession ("electrician" is not "electrical engineer").
+              plus adjacent jobs in the same field, which rank lower ("software engineer" -> "qa engineer",
+              "test automation engineer", "programmer"; "electrician" -> "electrical engineer"; "music teacher" ->
+              "vocalist", "veena player", "carnatic musician"). Keep the field words in every alternative ("music teacher"
+              -> "music tutor", never a bare "tutor" or "instructor"). Never a job from another field ("music teacher" is
+              not "maths teacher"; "software developer" is not "land developer").
               minYears: years of experience tied to this need ("python developer with 8+ years" -> 8), else null.
             - nice: extras that only improve ranking: seniority ("senior", "lead"), and education when a profession or
               skill is also asked. Education asked alone goes in must.

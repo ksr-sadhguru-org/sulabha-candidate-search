@@ -53,6 +53,10 @@ export class ResumeApiService {
     return firstValueFrom(this.http.post<TablesResponse>(`${API_BASE}/create_all_tables`, {}));
   }
 
+  clearQueryCache(): Promise<{ message: string; cleared_queries: number }> {
+    return firstValueFrom(this.http.delete<{ message: string; cleared_queries: number }>(`${API_BASE}/query_cache`));
+  }
+
   clearAllData(): Promise<TablesResponse> {
     return firstValueFrom(this.http.delete<TablesResponse>(`${API_BASE}/clear_all_data`));
   }

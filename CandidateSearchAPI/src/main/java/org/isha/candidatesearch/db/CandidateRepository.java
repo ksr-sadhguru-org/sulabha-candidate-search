@@ -104,6 +104,11 @@ public class CandidateRepository {
         jdbc.sql(UPSERT).params(params).update();
     }
 
+    /** Removes one candidate; their expertise and terms go with them (ON DELETE CASCADE). */
+    public boolean delete(String id) {
+        return jdbc.sql("DELETE FROM candidates WHERE id = :id").param("id", id).update() > 0;
+    }
+
     public Optional<ApplicantDetails> findForm(String id) {
         return jdbc.sql("SELECT " + String.join(", ", FORM_COLUMNS) + " FROM candidates WHERE id = :id")
                 .param("id", id)

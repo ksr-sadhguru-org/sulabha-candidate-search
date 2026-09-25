@@ -11,7 +11,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | Filter-only query (E5) | List everyone matching the filters |
 | Spoken language (E6) | LLM decides from context: "French translator" -> skill; "accountant who speaks Tamil" -> filter. A resume showing work in a language gets an entry for it |
 | Location | LLM resolves a city to "City, State, Country" (e.g. "Coimbatore, Tamil Nadu, India"), in the form pre-fill and in query filters |
-| Electrician vs electrical engineer | Different professions; neither search returns the other |
+| Adjacent jobs | Jobs next to each other in the same field (electrician / electrical engineer, software developer / QA engineer, music teacher / vocalist) appear for each other as related matches, ranked below direct matches. Jobs from another field never do (music teacher / maths teacher, software developer / land developer) |
 | Skill competencies | Form field lists years per skill: `Java (2 years), Spring Boot (4 years)`. Human-editable; search uses these years |
 | Skill with no years | Defaults to the candidate's overall years (filled by the LLM, or at save for skills added by hand) |
 | Years in a query | Tied to a skill/profession ("python developer with 8+ years") -> that skill's years. Years alone ("10+ years experience") -> overall experience field |
@@ -57,10 +57,11 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | C9 | Typos in the query | "electrcian", "sanskirt teacher" | Same as correct spelling |
 | C10 | Unrelated word coincidence | "senior" / "sr", "language" | No false matches (classroom, "Languages:") |
 | C11 | Abbreviations | "sr java dev", "B.E." | Same as the full form |
-| C12 | Similar-sounding professions | "electrician" vs "electrical engineer" | Each finds only its own profession |
+| C12 | Adjacent professions | "electrician" vs "electrical engineer" | Its own profession first; the other only as a related match below |
 | C13 | Gibberish | "sdfsdf dddid" | "We couldn't understand this search. Try describing the role, skills or location, e.g. 'Java developer in Coimbatore'." |
 | C14 | Nothing specific | "looking for someone good" | Hint to add a role, skill or location |
 | C15 | Understood, no matches | "astronaut in Coimbatore" | "No candidates match 'astronaut' in Coimbatore." |
+| C16 | Broad job category | "software engineer", "software developer" | Every programming role (Java, Python, .NET, full stack); adjacent QA / former programmers as related, ranked below; never electrical engineers, electricians or a land developer |
 
 ## D. Ranking
 
@@ -104,11 +105,11 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | G1 | senior developer with java skills in indore | All Java developers; seniors higher; location no match for all (E10) |
 | G2 | Person who knows Tally software and is in Pune | Tally users; Pune first; accountants without Tally are not skill matches |
 | G3 | Candidate who knows Java and is in Pune | Anyone with Java (developer, tester, trainer); Pune first |
-| G4 | Candidate who is an electrical engineer and is in coimbatore and is a meditator | Electrical engineers only (no electricians); tiered by location + meditator |
+| G4 | Candidate who is an electrical engineer and is in coimbatore and is a meditator | Electrical engineers first, tiered by location + meditator; electricians only as related, below |
 | G5 | candidate who knows sanskrit and is a teacher | Sanskrit teacher first; Sanskrit counts as a skill here |
-| G6 | Music teacher | Music teachers first (C2) |
+| G6 | Music teacher | Music teachers first (C2); other music roles may follow as related; never other teachers |
 | G7 | Plumber | Plumbers, including "plumbing" resumes (C8) |
-| G8 | Electrician | Electricians only; no electrical engineers (C12) |
+| G8 | Electrician | Electricians first; electrical engineers only as related, below (C12) |
 | G9 | teachers | Same as "teacher" (C1) |
 | G10 | Candidate who is willing to stay in ashram | Everyone with Stay in ashram = Yes (E5) |
 | G11 | python developer with 8+ years experience in Coimbatore who is also an Isha meditator | Python >= 8 yrs passes (E2); location and meditator as filters; "Isha meditator" is the meditator filter, not a skill |
