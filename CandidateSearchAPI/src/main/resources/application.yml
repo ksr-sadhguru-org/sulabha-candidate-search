@@ -1,0 +1,30 @@
+server:
+  port: 8000
+
+spring:
+  application:
+    name: candidatesearch
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:candidate_db}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:password}
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+
+candidatesearch:
+  mock-llm: ${MOCK_LLM:false}
+  openai:
+    api-key: ${OPENAI_API_KEY:}
+    # Blank for the public OpenAI API, or an Azure OpenAI endpoint (https://<resource>.openai.azure.com/openai/v1/),
+    # where model/query-model are deployment names.
+    base-url: ${OPENAI_BASE_URL:}
+    model: ${OPENAI_MODEL:gpt-4.1}
+    query-model: ${OPENAI_QUERY_MODEL:gpt-4.1}
+
+logging:
+  level:
+    org.isha.candidatesearch: INFO

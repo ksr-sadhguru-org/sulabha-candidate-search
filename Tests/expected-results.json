@@ -1,0 +1,110 @@
+{
+  "_readme": {
+    "resumes": "Tests/Candidate Resumes for Tests/",
+    "scenarios": "Tests/scenarios.md (IDs match)",
+    "names": "Candidates are identified by the name on the resume. 'Ravi Kumar (Chef)' / 'Ravi Kumar (Designer)' disambiguate by title.",
+    "query_checks": {
+      "first": "these candidates, in any order, occupy the top positions",
+      "include": "must appear in results",
+      "exclude": "must not appear at all",
+      "not_skill_match": "may appear as a text/keyword match, never as a profile/skill match",
+      "order": "pairs [a, b]: a ranks above b",
+      "filters": "expected filter result per candidate: pass | fail | not_on_file",
+      "message": "case-insensitive substring of the message shown when there are no or unclear results",
+      "count_max": "at most this many results"
+    }
+  },
+
+  "upload_order": [
+    "all files except the three below, in one bulk upload (F2)",
+    "Rohan Kulkarni - Senior Java Developer (Resubmission).docx",
+    "Vikram Patil - Java Developer (Updated).docx",
+    "Scanned Resume - Unreadable.pdf"
+  ],
+
+  "manual_fields": {
+    "Senthil Kumar":    { "is_meditator": "Yes" },
+    "Anil Sharma":      { "is_meditator": "Yes" },
+    "Kiran Rao":        { "is_meditator": "Yes" },
+    "Harish Chandran":  { "is_meditator": "Yes", "stay_in_ashram": "Yes", "done_isha_program": "Yes" },
+    "Saraswati Iyer":   { "is_meditator": "Yes", "stay_in_ashram": "Yes" },
+    "Muthu Pandian":    { "stay_in_ashram": "No" }
+  },
+
+  "uploads": [
+    { "id": "A1", "candidate": "Rohan Kulkarni", "expertise": [{ "name": "senior java developer", "years_min": 8, "years_max": 10 }], "entry_count_max_for": { "java developer": 1 } },
+    { "id": "A2", "candidate": "Meenakshi Sundaram", "expertise": [{ "name": "music teacher" }, { "name": "veena player" }] },
+    { "id": "A3", "candidate": "Sanjay Verma", "expertise": [{ "name": "java developer", "years_min": 1, "years_max": 3 }, { "name": "plumb*", "years_min": 7 }] },
+    { "id": "A3", "candidate": "Kiran Rao", "expertise": [{ "name": "python developer", "years_min": 2, "years_max": 4 }] },
+    { "id": "A4", "order_by_score": ["Rohan Kulkarni", "Sneha Joshi", "Vikram Patil"], "term": "java" },
+    { "id": "A5", "candidate": "Kavya Subramanian", "expertise": [{ "name": "python" }] },
+    { "id": "A6", "candidate": "Rahul Singh", "expertise": [{ "name": "bachelors" }], "max_score_non_education": 65 },
+    { "id": "A7", "candidate": "Balaji Natarajan", "expertise": [{ "name": "senior carpenter" }], "terms_include": ["carpenter", "woodworking"] },
+    { "id": "A7", "candidate": "Arvind Mishra", "expertise": [{ "name": "tabla player" }] },
+    { "id": "A8", "candidate": "Muthu Pandian", "expertise": [{ "name": "driver", "years_min": 8 }] },
+    { "id": "A9", "candidate": "Srinivasan Raghavan", "lower_score": ["cobol", "project manager"] },
+    { "id": "A10", "file": "Scanned Resume - Unreadable.pdf", "expect_error": true, "saved": false },
+    { "id": "A11", "candidate": "Ramesh Kumar", "form": { "skill_competencies_pattern": "Plumbing \\(\\d+ years?\\)" } },
+    { "id": "A11", "candidate": "Rohan Kulkarni", "form": { "skill_competencies_pattern": "Java \\(\\d+ years?\\)" } },
+    { "id": "A12", "candidate": "Ramesh Kumar", "form": { "job_location": "Coimbatore, Tamil Nadu, India" } },
+    { "id": "A12", "candidate": "Sanjay Verma", "form": { "job_location": "Dubai, Dubai, United Arab Emirates" }, "note": "state part may vary; country must be UAE" },
+    { "id": "A13", "candidate": "Aditi Deshpande", "expertise": [{ "name": "french*" }] },
+    { "id": "B1", "file": "Rohan Kulkarni - Senior Java Developer (Resubmission).docx", "expect": "already_exists" },
+    { "id": "B2", "file": "Vikram Patil - Java Developer (Updated).docx", "expect": "updated_existing", "candidate_count": { "Vikram Patil": 1 }, "expertise": [{ "name": "kotlin*" }] },
+    { "id": "B3", "candidate_count": { "Ravi Kumar": 2 } }
+  ],
+
+  "queries": [
+    { "id": "C1", "q": "teacher", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan"], "not_skill_match": ["Rohan Kulkarni"] },
+    { "id": "C2", "q": "music teacher", "first": ["Meenakshi Sundaram"], "not_skill_match": ["Saraswati Iyer", "Revathi Krishnan"] },
+    { "id": "C3", "q": "tutor", "include": ["Geetha Ramachandran"] },
+    { "id": "C3", "q": "yoga instructor", "first": ["Harish Chandran"] },
+    { "id": "C4", "q": "c++ programmer", "not_skill_match": ["Farhan Ali", "Rohan Kulkarni", "Deepa Nair"] },
+    { "id": "C5", "q": "java and python developer", "first": ["Deepa Nair"], "not_skill_match": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"] },
+    { "id": "C6", "q": "senior carpenter", "first": ["Balaji Natarajan"], "include": ["Joseph Mathew"], "order": [["Balaji Natarajan", "Joseph Mathew"]], "not_skill_match": ["Rohan Kulkarni", "Anil Sharma", "Farhan Ali"] },
+    { "id": "C7", "q": "spring boot", "include": ["Rohan Kulkarni", "Sneha Joshi", "Deepa Nair"] },
+    { "id": "C8", "q": "plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
+    { "id": "C8", "q": "plumbing", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
+    { "id": "C8", "q": "carpentry", "include": ["Balaji Natarajan", "Joseph Mathew"] },
+    { "id": "C9", "q": "electrcian", "first": ["Murugan Selvam"], "exclude": ["Senthil Kumar", "Divya Raghavan"] },
+    { "id": "C9", "q": "sanskirt teacher", "first": ["Saraswati Iyer"] },
+    { "id": "C10", "q": "senior developer", "not_skill_match": ["Revathi Krishnan", "Balaji Natarajan", "Ramesh Kumar"] },
+    { "id": "C11", "q": "sr java dev", "first": ["Rohan Kulkarni"] },
+    { "id": "C11", "q": "B.E. graduate", "include": ["Rahul Singh"] },
+    { "id": "C12", "q": "electrical engineer", "first": ["Senthil Kumar", "Divya Raghavan"], "exclude": ["Murugan Selvam"] },
+    { "id": "C13", "q": "sdfsdf dddid", "count_max": 0, "message": "couldn't understand" },
+    { "id": "C14", "q": "looking for someone good", "count_max": 0, "message": "role, skill" },
+    { "id": "C15", "q": "astronaut in Coimbatore", "count_max": 0, "message": "no candidates match" },
+
+    { "id": "D1", "q": "java developer", "order": [["Rohan Kulkarni", "Sneha Joshi"], ["Sneha Joshi", "Vikram Patil"]] },
+    { "id": "D2", "q": "python", "order": [["Anil Sharma", "Kavya Subramanian"], ["Deepa Nair", "Kavya Subramanian"]] },
+    { "id": "D5", "q": "teacher", "repeat": 3, "same_order": true },
+
+    { "id": "E1", "q": "plumber in Coimbatore", "first": ["Ramesh Kumar"], "filters": { "Ramesh Kumar": { "location": "pass" }, "Sanjay Verma": { "location": "fail" } } },
+    { "id": "E2", "q": "python developer with 8+ years", "order": [["Anil Sharma", "Kiran Rao"]], "filters": { "Anil Sharma": { "experience": "pass" }, "Kiran Rao": { "experience": "fail" } } },
+    { "id": "E4", "q": "yoga instructor in Coimbatore who is a meditator and willing to stay in the ashram", "first": ["Harish Chandran"], "filters": { "Harish Chandran": { "location": "pass", "is_meditator": "pass", "stay_in_ashram": "pass" } } },
+    { "id": "E5", "q": "anyone in Coimbatore who is a meditator", "first": ["Senthil Kumar", "Anil Sharma", "Kiran Rao", "Harish Chandran", "Saraswati Iyer"] },
+    { "id": "E6", "q": "accountant who speaks Tamil", "first": ["Kavya Subramanian"], "include": ["Pooja Agarwal", "Rakesh Jain"], "filters": { "Kavya Subramanian": { "languages": "pass" }, "Pooja Agarwal": { "languages": "fail" } } },
+    { "id": "E6", "q": "French translator", "first": ["Aditi Deshpande"] },
+    { "id": "E7", "q": "electrician in coimbatore", "filters": { "Murugan Selvam": { "location": "pass" } }, "parsed_location": "Coimbatore, Tamil Nadu, India" },
+    { "id": "E8", "q": "teacher in Tamil Nadu", "filters": { "Saraswati Iyer": { "location": "pass" }, "Meenakshi Sundaram": { "location": "pass" }, "Geetha Ramachandran": { "location": "pass" }, "Revathi Krishnan": { "location": "fail" } } },
+    { "id": "E9", "q": "java developer in India", "filters": { "Rohan Kulkarni": { "location": "pass" }, "Sanjay Verma": { "location": "fail" } } },
+    { "id": "E10", "q": "java developer in Indore", "include": ["Rohan Kulkarni", "Sneha Joshi"], "filters": { "Rohan Kulkarni": { "location": "fail" }, "Sneha Joshi": { "location": "fail" } } },
+    { "id": "E11", "q": "someone with 10+ years experience", "include": ["Srinivasan Raghavan"], "exclude": ["Rahul Singh"], "filters": { "Srinivasan Raghavan": { "experience": "pass" } } },
+
+    { "id": "F4", "q": "C# .NET developer", "first": ["Farhan Ali"] },
+    { "id": "F4", "q": "Node.js", "include": ["Farhan Ali"] },
+
+    { "id": "G1", "q": "senior developer with java skills in indore", "first": ["Rohan Kulkarni"], "include": ["Sneha Joshi", "Vikram Patil", "Sanjay Verma", "Deepa Nair"], "order": [["Rohan Kulkarni", "Vikram Patil"]], "filters": { "Rohan Kulkarni": { "location": "fail" } } },
+    { "id": "G2", "q": "Person who knows Tally software and is in Pune", "first": ["Pooja Agarwal"], "include": ["Rakesh Jain"], "order": [["Pooja Agarwal", "Rakesh Jain"]], "not_skill_match": ["Kavya Subramanian"], "filters": { "Pooja Agarwal": { "location": "pass" }, "Rakesh Jain": { "location": "fail" } } },
+    { "id": "G3", "q": "Candidate who knows Java and is in Pune", "first": ["Rohan Kulkarni", "Priya Menon"], "include": ["Sneha Joshi", "Suresh Babu", "Deepa Nair"], "filters": { "Rohan Kulkarni": { "location": "pass" }, "Priya Menon": { "location": "pass" }, "Sneha Joshi": { "location": "fail" } } },
+    { "id": "G4", "q": "Candidate who is an electrical engineer and is in coimbatore and is a meditator", "first": ["Senthil Kumar"], "include": ["Divya Raghavan"], "exclude": ["Murugan Selvam"], "filters": { "Senthil Kumar": { "location": "pass", "is_meditator": "pass" }, "Divya Raghavan": { "location": "fail", "is_meditator": "not_on_file" } } },
+    { "id": "G5", "q": "candidate who knows sanskrit and is a teacher", "first": ["Saraswati Iyer"], "not_skill_match": ["Meenakshi Sundaram", "Revathi Krishnan"] },
+    { "id": "G6", "q": "Music teacher", "first": ["Meenakshi Sundaram"] },
+    { "id": "G7", "q": "Plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
+    { "id": "G8", "q": "Electrician", "first": ["Murugan Selvam"], "exclude": ["Senthil Kumar", "Divya Raghavan"] },
+    { "id": "G9", "q": "teachers", "include": ["Saraswati Iyer", "Meenakshi Sundaram", "Revathi Krishnan"], "same_results_as": "teacher" },
+    { "id": "G10", "q": "Candidate who is willing to stay in ashram", "first": ["Harish Chandran", "Saraswati Iyer"], "exclude": ["Muthu Pandian"] },
+    { "id": "G11", "q": "python developer with 8+ years experience in Coimbatore who is also an Isha meditator", "first": ["Anil Sharma"], "order": [["Anil Sharma", "Kiran Rao"]], "filters": { "Anil Sharma": { "experience": "pass", "location": "pass", "is_meditator": "pass" }, "Kiran Rao": { "experience": "fail", "location": "pass", "is_meditator": "pass" } } }
+  ]
+}

@@ -1,0 +1,121 @@
+<h1>Search Candidates</h1>
+<p>Describe who you're looking for in plain language - role, skills, experience, location, anything relevant.</p>
+
+<div class="card">
+  <div class="field">
+    <label for="query">Search query</label>
+    <textarea
+      id="query"
+      rows="3"
+      placeholder="e.g. Python developer with 8+ years experience in Coimbatore who is also an Isha meditator"
+      [value]="state.queryText()"
+      (input)="onQueryInput($event)"
+      (keydown.control.enter)="onSearchShortcut()"
+    ></textarea>
+  </div>
+  <button class="btn-primary" (click)="onSearch()" [disabled]="state.loading() || !state.queryText().trim()">
+    {{ state.loading() ? 'Searching…' : 'Search' }}
+  </button>
+  <span class="hint shortcut-hint">Ctrl+Enter to search</span>
+  @if (state.errorMessage()) {
+    <p class="error">{{ state.errorMessage() }}</p>
+  }
+</div>
+
+@if (state.results(); as results) {
+  @if (results.length) {
+    <h2>{{ results.length }} candidate{{ results.length === 1 ? '' : 's' }} found</h2>
+  }
+  @if (state.message()) {
+    <p class="search-message">{{ state.message() }}</p>
+  }
+
+  @for (match of results; track match.candidate_id) {
+    <div class="card result-card">
+      <div class="name-row">
+        <strong>{{ match.name || match.candidate_id }}</strong>
+        @if (match.name) {
+          <span class="candidate-id">{{ match.candidate_id }}</span>
+        }
+      </div>
+
+      <div class="badges-row">
+        @if (match.match_type !== 'filters') {
+          <span class="{{ matchClass(match) }} has-tooltip" [attr.data-tooltip]="matchTooltip(match)">
+            {{ matchLabel(match) }}:
+            {{ match.matched.length ? formatEntries(match.matched) : '' }}{{ match.matched.length && match.text_matches.length ? ', ' : '' }}{{ match.text_matches.join(', ') }}
+          </span>
+        }
+        @if (match.nice_matches.length) {
+          <span class="badge badge-keyword has-tooltip" data-tooltip="Extras from the query this candidate also has - they rank higher">
+            Also: {{ match.nice_matches.join(', ') }}
+          </span>
+        }
+        @if (match.filters.length) {
+          <span class="badge {{ filterBadgeClass(match) }}">{{ filterBadgeLabel(match) }}: {{ filterBadgeDetail(match) }}</span>
+        }
+      </div>
+
+      <dl class="details">
+        @if (match.total_years != null) {
+          <div><dt>Experience</dt><dd>{{ years(match.total_years) }}</dd></div>
+        } @else if (match.experience) {
+          <div><dt>Experience</dt><dd>{{ match.experience }}</dd></div>
+        }
+        @if (match.qualification) {
+          <div><dt>Qualification</dt><dd>{{ match.qualification }}</dd></div>
+        }
+        @if (match.job_location) {
+          <div><dt>Location</dt><dd>{{ match.job_location }}</dd></div>
+        }
+        @if (match.languages) {
+          <div><dt>Languages</dt><dd>{{ match.languages }}</dd></div>
+        }
+        @if (match.is_meditator) {
+          <div><dt>Meditator</dt><dd>{{ match.is_meditator }}</dd></div>
+        }
+        @if (match.stay_in_ashram) {
+          <div><dt>Stay in ashram</dt><dd>{{ match.stay_in_ashram }}</dd></div>
+        }
+      </dl>
+
+      <button class="btn-link" (click)="onToggleDetail(match.candidate_id)">
+        {{ state.expandedId() === match.candidate_id ? 'Hide full record' : 'View full record' }}
+      </button>
+
+      @if (state.expandedId() === match.candidate_id) {
+        <div class="detail-panel">
+          @if (state.detailLoadingId() === match.candidate_id) {
+            <p>Loading…</p>
+          } @else if (state.detailError()) {
+            <p class="error">{{ state.detailError() }}</p>
+          } @else if (state.detailFor(match.candidate_id); as detail) {
+            <h3>Search profile</h3>
+            <table class="profile-table">
+              <thead><tr><th>Area of expertise</th><th>From</th><th>Score</th><th>Years</th><th>Found by</th></tr></thead>
+              <tbody>
+                @for (e of detail.expertise; track $index) {
+                  <tr>
+                    <td>{{ e.name }}</td>
+                    <td>{{ e.source === 'form' ? 'form' : 'resume' }}</td>
+                    <td>{{ e.score }}</td>
+                    <td>{{ e.years ?? '' }}</td>
+                    <td class="terms">{{ e.terms.join(', ') }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+            <app-candidate-record-editor
+              [candidateId]="match.candidate_id"
+              [idEditable]="false"
+              [initialResumeName]="detail.resume_name"
+              [initialResumeText]="detail.resume_text"
+              [initialApplicantDetails]="detail.applicant_details ?? emptyApplicantDetails"
+              (saved)="onDetailSaved(match.candidate_id)"
+            />
+          }
+        </div>
+      }
+    </div>
+  }
+}

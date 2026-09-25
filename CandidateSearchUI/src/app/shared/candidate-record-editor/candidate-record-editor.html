@@ -1,0 +1,167 @@
+<div class="editable-fields" (input)="onFieldChanged()" (change)="onFieldChanged()" (keydown.control.enter)="onSaveShortcut($event)">
+<div class="field">
+  <label [attr.for]="idEditable() ? 'candidateId-' + candidateId() : null">Candidate ID</label>
+  @if (idEditable()) {
+    <input id="candidateId-{{ candidateId() }}" type="text" [(ngModel)]="editableId" />
+  } @else {
+    <div class="readonly-id">{{ editableId }}</div>
+  }
+</div>
+
+<div class="field">
+  <label for="resumeName-{{ candidateId() }}">Resume name</label>
+  <input id="resumeName-{{ candidateId() }}" type="text" [(ngModel)]="resumeName" />
+</div>
+
+<div class="field">
+  <label for="resumeText-{{ candidateId() }}">Resume text</label>
+  <textarea id="resumeText-{{ candidateId() }}" rows="14" class="resume-text-input" [(ngModel)]="resumeText"></textarea>
+</div>
+
+<h3>From the resume (AI-suggested - please verify)</h3>
+<div class="grid">
+  <div class="field">
+    <label for="name-{{ candidateId() }}">Name</label>
+    <input id="name-{{ candidateId() }}" type="text" [(ngModel)]="details.name" />
+  </div>
+  <div class="field">
+    <label for="emailFrom-{{ candidateId() }}">Email</label>
+    <input id="emailFrom-{{ candidateId() }}" type="text" [(ngModel)]="details.email_from" />
+  </div>
+  <div class="field">
+    <label for="phone-{{ candidateId() }}">Phone</label>
+    <input id="phone-{{ candidateId() }}" type="text" [(ngModel)]="details.phone" />
+  </div>
+  <div class="field">
+    <label for="qualification-{{ candidateId() }}">Qualification</label>
+    <input id="qualification-{{ candidateId() }}" type="text" [(ngModel)]="details.qualification" />
+  </div>
+  <div class="field">
+    <label for="experience-{{ candidateId() }}">Experience</label>
+    <input id="experience-{{ candidateId() }}" type="text" [attr.list]="'experienceOptions-' + candidateId()" [(ngModel)]="details.experience" />
+    <datalist [id]="'experienceOptions-' + candidateId()">
+      @for (opt of experienceOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="nationality-{{ candidateId() }}">Nationality</label>
+    <input id="nationality-{{ candidateId() }}" type="text" [(ngModel)]="details.nationality" />
+  </div>
+  <div class="field">
+    <label for="jobLocation-{{ candidateId() }}">Location (City, State, Country)</label>
+    <input id="jobLocation-{{ candidateId() }}" type="text" [(ngModel)]="details.job_location" />
+  </div>
+  <div class="field">
+    <label for="languages-{{ candidateId() }}">Languages</label>
+    <input id="languages-{{ candidateId() }}" type="text" [(ngModel)]="details.languages" />
+  </div>
+  <div class="field">
+    <label for="linkedinProfile-{{ candidateId() }}">LinkedIn</label>
+    <input id="linkedinProfile-{{ candidateId() }}" type="text" [(ngModel)]="details.linkedin_profile" />
+  </div>
+  <div class="field">
+    <label for="skillCompetencies-{{ candidateId() }}">Skill competencies</label>
+    <input id="skillCompetencies-{{ candidateId() }}" type="text" placeholder="Java (2 years), Spring Boot (4 years)" [(ngModel)]="details.skill_competencies" />
+  </div>
+  <div class="field">
+    <label for="otherInterests-{{ candidateId() }}">Other interests</label>
+    <input id="otherInterests-{{ candidateId() }}" type="text" [(ngModel)]="details.other_interests" />
+  </div>
+  <div class="field">
+    <label for="gender-{{ candidateId() }}">Gender</label>
+    <input id="gender-{{ candidateId() }}" type="text" [attr.list]="'genderOptions-' + candidateId()" [(ngModel)]="details.gender" />
+    <datalist [id]="'genderOptions-' + candidateId()">
+      @for (opt of genderOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="maritalStatus-{{ candidateId() }}">Marital status</label>
+    <input id="maritalStatus-{{ candidateId() }}" type="text" [attr.list]="'maritalStatusOptions-' + candidateId()" [(ngModel)]="details.marital_status" />
+    <datalist [id]="'maritalStatusOptions-' + candidateId()">
+      @for (opt of maritalStatusOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="dob-{{ candidateId() }}">Date of birth</label>
+    <input id="dob-{{ candidateId() }}" type="text" [(ngModel)]="details.dob" />
+  </div>
+</div>
+
+<h3>Manual entry (never inferable from a resume)</h3>
+<div class="grid">
+  <div class="field">
+    <label for="address-{{ candidateId() }}">Address</label>
+    <input id="address-{{ candidateId() }}" type="text" [(ngModel)]="details.address" />
+  </div>
+  <div class="field">
+    <label for="noticePeriod-{{ candidateId() }}">Notice period</label>
+    <input id="noticePeriod-{{ candidateId() }}" type="text" [attr.list]="'noticePeriodOptions-' + candidateId()" [(ngModel)]="details.notice_period" />
+    <datalist [id]="'noticePeriodOptions-' + candidateId()">
+      @for (opt of noticePeriodOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="salaryExpected-{{ candidateId() }}">Salary expected</label>
+    <input id="salaryExpected-{{ candidateId() }}" type="number" [(ngModel)]="details.salary_expected" />
+  </div>
+  <div class="field">
+    <label for="reasonForChange-{{ candidateId() }}">Reason for change</label>
+    <input id="reasonForChange-{{ candidateId() }}" type="text" [(ngModel)]="details.reason_for_change" />
+  </div>
+  <div class="field">
+    <label for="stayInAshram-{{ candidateId() }}">Stay in ashram</label>
+    <input id="stayInAshram-{{ candidateId() }}" type="text" [attr.list]="'stayInAshramOptions-' + candidateId()" [(ngModel)]="details.stay_in_ashram" />
+    <datalist [id]="'stayInAshramOptions-' + candidateId()">
+      @for (opt of stayInAshramOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="anyKindJob-{{ candidateId() }}">Open to any kind of job</label>
+    <input id="anyKindJob-{{ candidateId() }}" type="text" [attr.list]="'anyKindJobOptions-' + candidateId()" [(ngModel)]="details.any_kind_job" />
+    <datalist [id]="'anyKindJobOptions-' + candidateId()">
+      @for (opt of anyKindJobOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="durationWithIsha-{{ candidateId() }}">Duration with Isha</label>
+    <input id="durationWithIsha-{{ candidateId() }}" type="text" [attr.list]="'durationWithIshaOptions-' + candidateId()" [(ngModel)]="details.duration_with_isha" />
+    <datalist [id]="'durationWithIshaOptions-' + candidateId()">
+      @for (opt of durationWithIshaOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="doneIshaProgram-{{ candidateId() }}">Done Isha program</label>
+    <input id="doneIshaProgram-{{ candidateId() }}" type="text" [attr.list]="'doneIshaProgramOptions-' + candidateId()" [(ngModel)]="details.done_isha_program" />
+    <datalist [id]="'doneIshaProgramOptions-' + candidateId()">
+      @for (opt of doneIshaProgramOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="isMeditator-{{ candidateId() }}">Is meditator</label>
+    <input id="isMeditator-{{ candidateId() }}" type="text" [attr.list]="'isMeditatorOptions-' + candidateId()" [(ngModel)]="details.is_meditator" />
+    <datalist [id]="'isMeditatorOptions-' + candidateId()">
+      @for (opt of isMeditatorOptions; track opt) { <option [value]="opt">{{ opt }}</option> }
+    </datalist>
+  </div>
+  <div class="field">
+    <label for="applicantPrograms-{{ candidateId() }}">Isha programs attended</label>
+    <input id="applicantPrograms-{{ candidateId() }}" type="text" [(ngModel)]="details.applicant_programs" />
+  </div>
+  <div class="field">
+    <label for="jobId-{{ candidateId() }}">Job ID</label>
+    <input id="jobId-{{ candidateId() }}" type="text" [(ngModel)]="details.job_id" />
+  </div>
+</div>
+</div>
+
+<button class="btn-primary" (click)="save()" [disabled]="submitting() || !resumeText.trim()">
+  {{ submitting() ? 'Saving…' : 'Save' }}
+</button>
+<span class="hint shortcut-hint">Ctrl+Enter to save</span>
+
+@if (errorMessage()) {
+  <p class="error">{{ errorMessage() }}</p>
+}
+@if (successMessage()) {
+  <p class="success">{{ successMessage() }}</p>
+}

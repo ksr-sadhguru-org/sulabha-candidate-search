@@ -1,28 +1,24 @@
-# Legacy Python prototype - superseded, kept locally only, not part of this repo's history
-/ResumeSearch/
-
 # Local test data (may include real candidate resumes) - never committed
 /Sample Resumes/
 
 # Scratch / working files from development sessions
 /Temp/
 *.mp4
-dry-run-duplicate-panel.png
 
-# --- Angular / Node (ResumeSearchUI) ---
+# --- Angular / Node (CandidateSearchUI) ---
 node_modules/
-/ResumeSearchUI/dist
-/ResumeSearchUI/tmp
-/ResumeSearchUI/out-tsc
-/ResumeSearchUI/bazel-out
-/ResumeSearchUI/.angular/cache
+/CandidateSearchUI/dist
+/CandidateSearchUI/tmp
+/CandidateSearchUI/out-tsc
+/CandidateSearchUI/bazel-out
+/CandidateSearchUI/.angular/cache
 .sass-cache/
 npm-debug.log
 yarn-error.log
 __screenshots__/
 
-# --- Java / Maven (ResumeSearchAPI) ---
-/ResumeSearchAPI/target/
+# --- Java / Maven (CandidateSearchAPI) ---
+/CandidateSearchAPI/target/
 *.class
 
 # --- Secrets (API keys etc.) ---
@@ -51,3 +47,7 @@ __screenshots__/
 # --- OS files ---
 .DS_Store
 Thumbs.db
+
+
+# Output of Tests/run-tests.mjs
+/Tests/test-results.json
