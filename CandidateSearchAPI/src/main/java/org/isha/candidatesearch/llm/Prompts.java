@@ -51,13 +51,15 @@ final class Prompts {
               skill when it is one job ("java developer"); split otherwise ("developer with java skills" -> "developer",
               "java"; "c# .net developer" -> "c#", ".net developer"). "Knows X" -> "x" alone.
               term: lowercase, singular, as a resume would write it ("tally", not "tally software").
-              alternatives: close equivalents, the trade's other form and product variants a resume might use instead
-              ("teacher" -> "tutor", "instructor"; "plumber" -> "plumbing"; "tally" -> "tallyprime", "tally erp 9"),
-              plus adjacent jobs in the same field, which rank lower ("software engineer" -> "qa engineer",
+              alternatives: close equivalents and product variants a resume might use instead ("teacher" -> "tutor",
+              "instructor"; "tally" -> "tallyprime", "tally erp 9"), plus the core skill of the job written as a skill,
+              with its own equivalents ("python developer" -> "python", "python programming"; "plumber" -> "plumbing",
+              "pipe fitting"; "electrician" -> "electrical wiring", "house wiring"; "music teacher" -> "music",
+              "vocal music"), plus adjacent jobs in the same field, which rank lower ("software engineer" -> "qa engineer",
               "test automation engineer", "programmer"; "electrician" -> "electrical engineer"; "music teacher" ->
               "vocalist", "veena player", "carnatic musician"). Keep the field words in every alternative ("music teacher"
-              -> "music tutor", never a bare "tutor" or "instructor"). Never a job from another field ("music teacher" is
-              not "maths teacher"; "software developer" is not "land developer").
+              -> "music tutor", never a bare "tutor", "instructor", "electrical" or "development"). Never a job from
+              another field ("music teacher" is not "maths teacher"; "software developer" is not "land developer").
               minYears: years of experience tied to this need ("python developer with 8+ years" -> 8), else null.
             - nice: extras that only improve ranking: seniority ("senior", "lead"), and education when a profession or
               skill is also asked. Education asked alone goes in must.
@@ -75,7 +77,7 @@ final class Prompts {
 
             Return only this JSON:
             {"understood": true,
-             "must": [{"term": "python developer", "alternatives": ["python programmer", "python engineer"], "minYears": 8}],
+             "must": [{"term": "python developer", "alternatives": ["python programmer", "python", "python programming"], "minYears": 8}],
              "nice": [{"term": "senior", "alternatives": ["sr", "lead"], "minYears": null}],
              "filters": {"location": {"city": "Coimbatore", "state": "Tamil Nadu", "country": "India"}, "languages": ["Tamil"],
                "minTotalYears": null, "nationality": null, "gender": null, "maritalStatus": null, "noticePeriod": null,

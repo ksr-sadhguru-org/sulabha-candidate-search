@@ -61,6 +61,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | C13 | Gibberish | "sdfsdf dddid" | "We couldn't understand this search. Try describing the role, skills or location, e.g. 'Java developer in Coimbatore'." |
 | C14 | Nothing specific | "looking for someone good" | Hint to add a role, skill or location |
 | C15 | Understood, no matches | "astronaut in Coimbatore" | "No candidates match 'astronaut' in Coimbatore." |
+| C17 | Core skill of a job | "python developer" vs "candidate with python skills" | Both find everyone who knows Python; for "python developer" the developers come first and Kavya (accountant who uses Python) follows as a related match |
 | C16 | Broad job category | "software engineer", "software developer" | Every programming role (Java, Python, .NET, full stack); adjacent QA / former programmers as related, ranked below; never electrical engineers, electricians or a land developer |
 
 ## D. Ranking

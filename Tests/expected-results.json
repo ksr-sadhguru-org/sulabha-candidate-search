@@ -78,6 +78,8 @@
     { "id": "C15", "q": "astronaut in Coimbatore", "count_max": 0, "message": "no candidates match" },
     { "id": "C16", "q": "software engineer", "include": ["Rohan Kulkarni", "Deepa Nair", "Anil Sharma", "Farhan Ali", "Kiran Rao", "Vikram Patil", "Sneha Joshi", "Priya Menon"], "related_below": ["Priya Menon"], "exclude": ["Senthil Kumar", "Divya Raghavan", "Murugan Selvam", "Prakash Menon"] },
     { "id": "C16", "q": "software developer", "include": ["Rohan Kulkarni", "Deepa Nair", "Anil Sharma", "Farhan Ali", "Kiran Rao", "Vikram Patil", "Sneha Joshi"], "related_below": ["Priya Menon", "Srinivasan Raghavan"], "exclude": ["Senthil Kumar", "Divya Raghavan", "Murugan Selvam", "Prakash Menon"] },
+    { "id": "C17", "q": "python developer", "first": ["Anil Sharma", "Deepa Nair", "Kiran Rao"], "include": ["Kavya Subramanian"], "related_below": ["Kavya Subramanian"] },
+    { "id": "C17", "q": "candidate with python skills", "include": ["Anil Sharma", "Deepa Nair", "Kiran Rao", "Kavya Subramanian"] },
 
     { "id": "D1", "q": "java developer", "order": [["Rohan Kulkarni", "Sneha Joshi"], ["Sneha Joshi", "Vikram Patil"]] },
     { "id": "D2", "q": "python", "order": [["Anil Sharma", "Kavya Subramanian"], ["Deepa Nair", "Kavya Subramanian"]] },
