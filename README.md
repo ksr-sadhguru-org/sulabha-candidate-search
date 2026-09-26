@@ -3,8 +3,9 @@
 Natural-language resume search for HR: describe who you're looking for in plain English, and the app
 finds and ranks matching candidates, explaining why each one matched.
 
-**[Demo video](https://drive.google.com/drive/folders/1angI_cngKEo5irF_kbRkYJGkhSkXR1Oz?usp=drive_link)**
-— end-to-end walkthrough of upload and search (recorded on an earlier version of the app).
+**[Demo video (release v1.0)](https://github.com/ksr-sadhguru-org/sulabha-candidate-search/releases/tag/v1.0)**
+— captioned test run: bulk upload, duplicates and updated resumes, the key searches, paging and page state
+(download the MP4 under "Assets").
 
 ## Layout
 
