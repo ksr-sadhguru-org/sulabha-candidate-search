@@ -4,6 +4,14 @@ import { CandidateMatch, EMPTY_APPLICANT_DETAILS, FilterCheck, MatchedEntry } fr
 import { CandidateRecordEditor } from '../../shared/candidate-record-editor/candidate-record-editor';
 import { ExpandablePanel } from '../../shared/expandable-panel/expandable-panel';
 
+/** Shown under the Search button; clicking one puts it in the search box. */
+const EXAMPLES = [
+  'Java developer in Pune',
+  'Music teacher who is an Isha meditator',
+  'Python developer with 8+ years experience in Coimbatore',
+  'Candidate who is willing to stay in ashram',
+];
+
 const STATUS_MARK: Record<FilterCheck['status'], string> = { pass: '✓', fail: '✗', not_on_file: '?' };
 
 @Component({
@@ -14,6 +22,7 @@ const STATUS_MARK: Record<FilterCheck['status'], string> = { pass: '✓', fail: 
 })
 export class Search {
   readonly emptyApplicantDetails = EMPTY_APPLICANT_DETAILS;
+  readonly examples = EXAMPLES;
 
   constructor(readonly state: SearchStateService) {}
 
@@ -66,6 +75,10 @@ export class Search {
 
   years(value: number): string {
     return years(value);
+  }
+
+  useExample(example: string): void {
+    this.state.setQueryText(example);
   }
 
   onLoadMore(): void {

@@ -17,6 +17,12 @@
     {{ state.loading() ? 'Searching…' : 'Search' }}
   </button>
   <span class="hint shortcut-hint">Ctrl+Enter to search</span>
+  <div class="examples">
+    <span class="hint">Try:</span>
+    @for (example of examples; track example) {
+      <button type="button" class="example" (click)="useExample(example)">{{ example }}</button>
+    }
+  </div>
   @if (state.errorMessage()) {
     <p class="error">{{ state.errorMessage() }}</p>
   }
