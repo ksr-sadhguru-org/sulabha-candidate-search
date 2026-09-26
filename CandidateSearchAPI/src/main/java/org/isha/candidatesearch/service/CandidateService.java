@@ -2,6 +2,7 @@ package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.CandidateRepository;
 import org.isha.candidatesearch.db.ExpertiseRepository;
+import org.isha.candidatesearch.db.FieldRepository;
 import org.isha.candidatesearch.dto.ApplicantDetails;
 import org.isha.candidatesearch.dto.CandidateDetail;
 import org.isha.candidatesearch.dto.CandidateSummary;
@@ -20,6 +21,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.Optional;
 
 /** Saving a candidate: pick the record to write (new, same id, or the same person by email/phone), build the
@@ -37,12 +39,15 @@ public class CandidateService {
 
     private final CandidateRepository candidates;
     private final ExpertiseRepository expertise;
+    private final FieldRepository fields;
     private final LlmClient llm;
     private final TransactionTemplate tx;
 
-    public CandidateService(CandidateRepository candidates, ExpertiseRepository expertise, LlmClient llm, TransactionTemplate tx) {
+    public CandidateService(CandidateRepository candidates, ExpertiseRepository expertise, FieldRepository fields,
+                            LlmClient llm, TransactionTemplate tx) {
         this.candidates = candidates;
         this.expertise = expertise;
+        this.fields = fields;
         this.llm = llm;
         this.tx = tx;
     }
@@ -52,16 +57,19 @@ public class CandidateService {
             ApplicantDetails form = ApplicantNormalization.normalize(Optional.ofNullable(request.applicantDetails()).orElse(EMPTY_FORM));
             Target target = resolveTarget(request.candidateId(), form);
             Profile profile = reusableProfile(target.id(), request.resumeText())
-                    .orElseGet(() -> llm.buildProfile(request.resumeText(), form.skillCompetencies()));
+                    .orElseGet(() -> llm.buildProfile(request.resumeText(), form.skillCompetencies(), fields.names()));
             if (profile == null) {
                 return new UploadResponse(false, "The AI service could not read this resume - nothing was saved.", request.candidateId(), false);
             }
             var record = new CandidateRepository.Record(target.id(), request.resumeName(), request.resumeText(),
                     Hashing.sha256Hex(request.resumeText()), LlmJson.MAPPER.writeValueAsString(profile), profile.totalYears(),
                     emailKey(form.emailFrom()), phoneKey(form.phone()), Locations.parse(form.jobLocation()));
+            List<ExpertiseRepository.NewExpertise> rows = ProfileMapper.toExpertise(profile, form.skillCompetencies());
             tx.executeWithoutResult(status -> {
+                // A field the AI named that isn't on the list yet joins it, so later resumes and queries can use it.
+                rows.stream().map(ExpertiseRepository.NewExpertise::field).filter(Objects::nonNull).distinct().forEach(fields::add);
                 candidates.upsert(record, form);
-                expertise.replace(target.id(), ProfileMapper.toExpertise(profile, form.skillCompetencies()));
+                expertise.replace(target.id(), rows);
             });
             String message = target.updatedExisting()
                     ? "Updated the existing candidate " + target.existingName() + " (same email or phone)"

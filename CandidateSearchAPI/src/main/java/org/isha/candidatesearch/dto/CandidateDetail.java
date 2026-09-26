@@ -7,6 +7,6 @@ public record CandidateDetail(String candidateId, String resumeName, String resu
                               ApplicantDetails applicantDetails, List<ExpertiseView> expertise) {
 
     /** source: "resume" (LLM profile) or "form" (the reviewed skill competencies field). */
-    public record ExpertiseView(String name, String kind, String source, int score, Double years, List<String> terms) {
+    public record ExpertiseView(String name, String kind, String field, String source, int score, Double years, List<String> terms) {
     }
 }

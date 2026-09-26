@@ -36,11 +36,13 @@ export class Search {
   }
 
   matchLabel(match: CandidateMatch): string {
-    return { profile: 'Profile match', related: 'Related match', text: 'Resume text match', filters: '' }[match.match_type];
+    return match.match_type === 'partial'
+      ? `Partial match (${match.must_met} of ${match.must_total})`
+      : { profile: 'Profile match', related: 'Related match', text: 'Resume text match', filters: '' }[match.match_type];
   }
 
   matchClass(match: CandidateMatch): string {
-    return { profile: 'chip', related: 'badge badge-keyword-related', text: 'badge badge-keyword', filters: '' }[match.match_type];
+    return { profile: 'chip', related: 'badge badge-keyword-related', text: 'badge badge-keyword', partial: 'badge badge-keyword-partial', filters: '' }[match.match_type];
   }
 
   matchTooltip(match: CandidateMatch): string {
@@ -48,6 +50,7 @@ export class Search {
       profile: 'Every requirement is in this candidate\'s search profile; score 0-100 from relevant years of experience',
       related: 'Found through an equivalent term (e.g. "tutor" for "teacher") or only through a degree',
       text: 'Not in the search profile, but the resume text mentions it',
+      partial: 'Meets only some of the requirements - ranked below candidates who meet them all',
       filters: '',
     }[match.match_type];
   }

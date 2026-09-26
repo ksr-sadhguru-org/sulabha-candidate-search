@@ -33,14 +33,14 @@ public class AzureLlmClient implements LlmClient {
     }
 
     @Override
-    public Profile buildProfile(String resumeText, String verifiedSkills) {
+    public Profile buildProfile(String resumeText, String verifiedSkills, List<String> fields) {
         String skills = verifiedSkills == null || verifiedSkills.isBlank() ? "none" : verifiedSkills;
-        return complete(properties.openai().model(), Prompts.PROFILE.formatted(skills, resumeText), Profile.class);
+        return complete(properties.openai().model(), Prompts.PROFILE.formatted(String.join(", ", fields), skills, resumeText), Profile.class);
     }
 
     @Override
-    public ParsedQuery parseQuery(String query) {
-        return complete(properties.openai().queryModel(), Prompts.QUERY.formatted(query), ParsedQuery.class);
+    public ParsedQuery parseQuery(String query, List<String> fields) {
+        return complete(properties.openai().queryModel(), Prompts.QUERY.formatted(String.join(", ", fields), query), ParsedQuery.class);
     }
 
     @Override

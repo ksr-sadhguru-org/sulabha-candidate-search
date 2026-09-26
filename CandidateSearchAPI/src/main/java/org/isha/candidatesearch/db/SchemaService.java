@@ -14,6 +14,8 @@ import java.util.List;
  * - expertise: one row per area of expertise, from the resume (LLM profile) or the form (skill competencies).
  * - expertise_terms: every normalized phrase that finds an expertise row. Nothing is shared between candidates.
  * - query_cache: each query's parsed form, so the same query always searches the same way.
+ * - fields: the growing list of fields (software & it, music, ...) job entries are labelled with. It is vocabulary,
+ *   not candidate data, so Clear All Data keeps it; it starts from STARTER_FIELDS.
  */
 @Service
 public class SchemaService {
@@ -22,6 +24,12 @@ public class SchemaService {
 
     /** Children first, so DROP works without CASCADE ordering surprises. */
     public static final List<String> TABLES = List.of("expertise_terms", "expertise", "candidates", "query_cache");
+
+    /** Seed for the fields table; the AI adds a new field only when none of the existing ones fits. */
+    public static final List<String> STARTER_FIELDS = List.of(
+            "software & it", "electrical", "mechanical", "civil & construction", "music", "performing arts",
+            "teaching & education", "languages & translation", "accounting & finance", "healthcare", "hospitality & food",
+            "trades", "design & media", "management", "yoga & wellness", "transport & logistics");
 
     private final JdbcClient jdbcClient;
 
@@ -58,6 +66,11 @@ public class SchemaService {
                     name VARCHAR(255) NOT NULL, kind VARCHAR(20), source VARCHAR(10) NOT NULL, score INT NOT NULL, years REAL
                 )""").update();
         jdbcClient.sql("CREATE INDEX IF NOT EXISTS idx_expertise_candidate ON expertise(candidate_id)").update();
+        jdbcClient.sql("ALTER TABLE expertise ADD COLUMN IF NOT EXISTS field VARCHAR(100)").update();
+
+        jdbcClient.sql("CREATE TABLE IF NOT EXISTS fields (name VARCHAR(100) PRIMARY KEY, created_date TIMESTAMP DEFAULT NOW())").update();
+        STARTER_FIELDS.forEach(name -> jdbcClient.sql("INSERT INTO fields (name) VALUES (:name) ON CONFLICT DO NOTHING")
+                .param("name", name).update());
 
         jdbcClient.sql("""
                 CREATE TABLE IF NOT EXISTS expertise_terms (
@@ -78,6 +91,7 @@ public class SchemaService {
 
     public List<String> dropAllTables() {
         TABLES.forEach(t -> jdbcClient.sql("DROP TABLE IF EXISTS " + t + " CASCADE").update());
+        jdbcClient.sql("DROP TABLE IF EXISTS fields").update();
         log.warn("Dropped tables: {}", TABLES);
         return TABLES;
     }

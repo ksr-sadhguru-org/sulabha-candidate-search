@@ -83,13 +83,16 @@ export interface FilterCheck {
 }
 
 /** profile: every must-have in the search profile; related: some via an equivalent; text: some only in the
- *  resume text; filters: a filter-only search. */
-export type MatchType = 'profile' | 'related' | 'text' | 'filters';
+ *  resume text; partial: only some of the must-haves met; filters: a filter-only search. */
+export type MatchType = 'profile' | 'related' | 'text' | 'partial' | 'filters';
 
 export interface CandidateMatch {
   candidate_id: string;
   name: string | null;
   match_type: MatchType;
+  /** How many of the query's must-haves this candidate meets. */
+  must_met: number;
+  must_total: number;
   matched: MatchedEntry[];
   text_matches: string[];
   nice_matches: string[];
@@ -115,10 +118,17 @@ export interface SearchResponse {
 export interface ExpertiseView {
   name: string;
   kind: string | null;
+  /** The job's field (job entries only), e.g. "software & it". */
+  field: string | null;
   source: 'resume' | 'form';
   score: number;
   years: number | null;
   terms: string[];
+}
+
+export interface FieldCount {
+  name: string;
+  candidates: number;
 }
 
 export interface CandidateDetail {

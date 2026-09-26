@@ -15,6 +15,9 @@ final class Prompts {
             - kind: "profession" (a job or trade), "skill" (a skill or tool not part of a profession entry),
               "education" (one entry, highest level, e.g. "Bachelors"), or "language" (a language the candidate works in,
               e.g. a translator's "French" - never a language they merely speak).
+            - field: for a profession entry only, the field of that job, from this list: %s. A skill or tool is not
+              labelled (null). Only when none of the listed fields fits, give a new short field name. A land developer is
+              "civil & construction", a Java developer "software & it", a music teacher "music".
             - terms: lowercase words and phrases an HR search might use that this entry proves: the name, synonyms,
               abbreviations, the plain profession ("java developer" for "Senior Java Developer"), both trade forms
               ("plumber" and "plumbing"), earlier titles, and the skills and tools used ("java", "spring boot"), with a
@@ -32,11 +35,11 @@ final class Prompts {
 
             Return only this JSON:
             {"totalYears": 9, "entries": [
-              {"name": "Senior Java Developer", "kind": "profession", "years": 9, "lastUsedYear": 2026, "score": null,
+              {"name": "Senior Java Developer", "kind": "profession", "field": "software & it", "years": 9, "lastUsedYear": 2026, "score": null,
                "terms": ["senior java developer", "sr java developer", "java developer", "software developer",
                          "software engineer", "java", "spring boot", "microservices"]},
-              {"name": "Python", "kind": "skill", "years": 2, "lastUsedYear": 2024, "score": null, "terms": ["python"]},
-              {"name": "Bachelors", "kind": "education", "years": 0, "lastUsedYear": null, "score": 80,
+              {"name": "Python", "kind": "skill", "field": null, "years": 2, "lastUsedYear": 2024, "score": null, "terms": ["python"]},
+              {"name": "Bachelors", "kind": "education", "field": null, "years": 0, "lastUsedYear": null, "score": 80,
                "terms": ["bachelors", "b.e.", "bachelor of engineering", "computer engineering"]}
             ]}
 
@@ -46,7 +49,12 @@ final class Prompts {
     static final String QUERY = """
             Turn this HR search query into search criteria. Correct spelling mistakes.
 
-            - understood: false if the query is gibberish or not a search for people, else true.
+            - understood: false if the query is gibberish or not a search for people, else true. A real job, even one
+              nobody may have ("astronaut in Coimbatore"), is understood.
+            - field: when the query names a specific skill or field, the field of the job asked for ("java developer",
+              "developer with java skills" -> "software & it"; "sanskrit teacher" -> "teaching & education"), or of the
+              skill when no job is named ("knows tally" -> "accounting & finance"). null when only a generic job is asked
+              with no skill ("teacher", "senior developer", "plumber"). Choose only from: %s.
             - must: what a candidate must be or know - the profession and core skills. Keep a profession with its one
               skill when it is one job ("java developer"); split otherwise ("developer with java skills" -> "developer",
               "java"; "c# .net developer" -> "c#", ".net developer"). "Knows X" -> "x" alone.
@@ -60,6 +68,8 @@ final class Prompts {
               "vocalist", "veena player", "carnatic musician"). Keep the field words in every alternative ("music teacher"
               -> "music tutor", never a bare "tutor", "instructor", "electrical" or "development"). Never a job from
               another field ("music teacher" is not "maths teacher"; "software developer" is not "land developer").
+              generic: true when the term is a job word that means different things in different fields ("developer",
+              "engineer", "teacher", "consultant"), else false.
               minYears: years of experience tied to this need ("python developer with 8+ years" -> 8), else null.
             - nice: extras that only improve ranking: seniority ("senior", "lead"), and education when a profession or
               skill is also asked. Education asked alone goes in must.
@@ -77,8 +87,10 @@ final class Prompts {
 
             Return only this JSON:
             {"understood": true,
-             "must": [{"term": "python developer", "alternatives": ["python programmer", "python", "python programming"], "minYears": 8}],
-             "nice": [{"term": "senior", "alternatives": ["sr", "lead"], "minYears": null}],
+             "field": "software & it",
+             "must": [{"term": "python developer", "alternatives": ["python programmer", "python", "python programming"],
+                       "generic": false, "minYears": 8}],
+             "nice": [{"term": "senior", "alternatives": ["sr", "lead"], "generic": false, "minYears": null}],
              "filters": {"location": {"city": "Coimbatore", "state": "Tamil Nadu", "country": "India"}, "languages": ["Tamil"],
                "minTotalYears": null, "nationality": null, "gender": null, "maritalStatus": null, "noticePeriod": null,
                "maxSalary": null, "stayInAshram": null, "doneIshaProgram": null, "isMeditator": "Yes", "anyKindJob": null,

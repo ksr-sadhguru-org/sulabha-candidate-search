@@ -143,6 +143,10 @@ for (const u of spec.uploads) {
       const [a, b] = u.lower_score.map(w => entries.find(e => nameMatch(e, w)));
       record(u.id, `${u.candidate}: ${u.lower_score[0]} scored below ${u.lower_score[1]}`, !!(a && b && a.score < b.score), show);
     }
+    for (const [entry, field] of Object.entries(u.job_fields ?? {})) {
+      const e = d.expertise.find(x => x.kind === 'profession' && x.name.toLowerCase().includes(entry));
+      record(u.id, `${u.candidate}: "${entry}" job labelled "${field}"`, e?.field === field, e ? `${e.name} -> ${e.field}` : show);
+    }
     if (u.form?.skill_competencies_pattern) {
       const sc = d.applicant_details.skill_competencies ?? '';
       record(u.id, `${u.candidate}: skill competencies with years`, new RegExp(u.form.skill_competencies_pattern).test(sc), sc);
@@ -175,6 +179,15 @@ for (const c of spec.queries) {
     if (c.not_skill_match) {
       const bad = c.not_skill_match.filter(p => { const i = names.indexOf(p); return i >= 0 && ['profile', 'related'].includes(r.results[i].match_type); });
       record(c.id, `${tag} no skill match for ${c.not_skill_match.join(', ')}`, !bad.length, `skill-matched ${bad} | ${brief}`);
+    }
+    const types = (r.results ?? []).map(m => m.match_type);
+    if (types.includes('partial')) {
+      const firstPartial = types.indexOf('partial');
+      record(c.id, `${tag} partial matches all follow the full matches`, types.slice(firstPartial).every(t => t === 'partial'), brief);
+    }
+    if (c.partial) {
+      const bad = c.partial.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'partial'; });
+      record(c.id, `${tag} ${c.partial.join(', ')} shown as partial matches`, !bad.length, `not partial: ${bad} | ${brief}`);
     }
     if (c.related_below) {
       const direct = names.filter((_, i) => r.results[i].match_type === 'profile').length;

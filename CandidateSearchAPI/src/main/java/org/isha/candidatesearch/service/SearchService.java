@@ -23,9 +23,9 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * Search: parse the query (cached), find who meets every must-have, check filters, rank.
- * Ranking, strongest first: how the must-haves were found (profile > equivalent > resume text), then filters
- * passed, then ranking extras met ("senior"), then profile score, then relevant years.
+ * Search: parse the query (cached), find who meets the must-haves, check filters, rank.
+ * Ranking, strongest first: how many must-haves are met (all before some), how they were found (profile > equivalent
+ * > resume text), then filters passed, then ranking extras met ("senior"), then profile score, then relevant years.
  */
 @Service
 public class SearchService {
@@ -34,10 +34,11 @@ public class SearchService {
     static final String TOO_VAGUE = "Please add a role, skill or location to search for, e.g. 'Java developer in Coimbatore'.";
 
     /** A result plus what it is ranked by. */
-    private record Ranked(CandidateMatch match, int quality, int niceMet, int score, double years) {
+    private record Ranked(CandidateMatch match, int mustMet, int quality, int niceMet, int score, double years) {
     }
 
-    private static final Comparator<Ranked> RANKING = Comparator.comparingInt(Ranked::quality).reversed()
+    private static final Comparator<Ranked> RANKING = Comparator.comparingInt(Ranked::mustMet).reversed()
+            .thenComparing(Comparator.comparingInt(Ranked::quality).reversed())
             .thenComparing(Comparator.comparingInt((Ranked r) -> r.match().filtersPassed()).reversed())
             .thenComparing(Comparator.comparingInt(Ranked::niceMet).reversed())
             .thenComparing(Comparator.comparingInt(Ranked::score).reversed())
@@ -68,11 +69,14 @@ public class SearchService {
             return new SearchResponse(TOO_VAGUE, q, List.of(), 0);
         }
 
-        List<Map<String, Result>> mustResults = must.stream().map(matcher::matchMust).toList();
+        // The field only restricts a query that names a specific skill; a generic job alone ("teacher") stays open.
+        String field = must.stream().anyMatch(n -> !n.isGeneric()) ? q.field() : null;
+        List<Map<String, Result>> mustResults = must.stream().map(n -> matcher.matchMust(n, field)).toList();
         List<Map<String, Result>> niceResults = nice.stream().map(matcher::matchNice).toList();
-        // Everyone meeting every must-have; a filter-only query considers everyone and keeps those passing all filters.
-        Set<String> ids = must.isEmpty() ? null : mustResults.stream().map(m -> (Set<String>) new HashSet<>(m.keySet()))
-                .reduce((a, b) -> { a.retainAll(b); return a; }).orElseGet(Set::of);
+        // Everyone meeting at least one must-have (those meeting all rank first); a filter-only query considers
+        // everyone and keeps those passing all filters.
+        Set<String> ids = must.isEmpty() ? null : mustResults.stream().flatMap(m -> m.keySet().stream())
+                .collect(java.util.stream.Collectors.toSet());
 
         List<CandidateMatch> results = candidates.findRows(ids).values().stream()
                 .map(row -> rank(row, q, must, mustResults, nice, niceResults))
@@ -86,19 +90,21 @@ public class SearchService {
 
     private Ranked rank(Row row, ParsedQuery q, List<Need> must, List<Map<String, Result>> mustResults,
                         List<Need> nice, List<Map<String, Result>> niceResults) {
-        List<Result> met = mustResults.stream().map(m -> m.get(row.id())).toList();
+        List<Result> perNeed = mustResults.stream().map(m -> m.get(row.id())).toList(); // null: need not met
+        List<Result> met = perNeed.stream().filter(Objects::nonNull).toList();
         List<FilterCheck> filters = Stream.concat(FilterEvaluator.evaluate(q.filters(), row).stream(),
-                IntStream.range(0, must.size()).mapToObj(i -> yearsCheck(must.get(i), met.get(i))).filter(Objects::nonNull)).toList();
+                IntStream.range(0, must.size()).mapToObj(i -> yearsCheck(must.get(i), perNeed.get(i))).filter(Objects::nonNull)).toList();
         List<String> niceMet = IntStream.range(0, nice.size())
                 .filter(i -> niceResults.get(i).containsKey(row.id())).mapToObj(i -> nice.get(i).term()).toList();
         int quality = met.stream().mapToInt(Result::quality).min().orElse(0);
 
-        CandidateMatch match = new CandidateMatch(row.id(), row.name(), matchType(must.isEmpty(), quality),
+        String type = !must.isEmpty() && met.size() < must.size() ? "partial" : matchType(must.isEmpty(), quality);
+        CandidateMatch match = new CandidateMatch(row.id(), row.name(), type, met.size(), must.size(),
                 matchedEntries(met), met.stream().map(Result::textTerm).filter(Objects::nonNull).distinct().toList(), niceMet,
                 filters, (int) filters.stream().filter(f -> FilterEvaluator.PASS.equals(f.status())).count(),
                 row.experience(), row.totalYears(), row.qualification(), row.jobLocation(), row.languages(),
                 row.isMeditator(), row.stayInAshram());
-        return new Ranked(match, quality, niceMet.size(), met.stream().mapToInt(Result::bestScore).sum(),
+        return new Ranked(match, met.size(), quality, niceMet.size(), met.stream().mapToInt(Result::bestScore).sum(),
                 met.stream().map(Result::years).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum());
     }
 
@@ -107,8 +113,8 @@ public class SearchService {
         if (need.minYears() == null) {
             return null;
         }
-        Double years = result.years();
-        String status = years == null ? FilterEvaluator.NOT_ON_FILE : years >= need.minYears() ? FilterEvaluator.PASS : FilterEvaluator.FAIL;
+        Double years = result == null ? null : result.years();
+        String status = result == null ? FilterEvaluator.FAIL : years == null ? FilterEvaluator.NOT_ON_FILE : years >= need.minYears() ? FilterEvaluator.PASS : FilterEvaluator.FAIL;
         return new FilterCheck("experience:" + need.term(), capitalize(need.term()) + " experience", status,
                 FilterEvaluator.fmt(need.minYears()) + "+ years", years == null ? null : FilterEvaluator.fmt(years) + " years");
     }

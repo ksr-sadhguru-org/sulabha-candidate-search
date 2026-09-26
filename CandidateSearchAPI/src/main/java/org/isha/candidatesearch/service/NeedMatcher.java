@@ -49,17 +49,19 @@ class NeedMatcher {
         this.textSearch = textSearch;
     }
 
-    /** Must-haves: profile terms equal to or ending with the need. */
-    Map<String, Result> matchMust(Need need) {
-        return match(need, false);
+    /** Must-haves: profile terms equal to or ending with the need. A generic job word ("developer") in a query with a
+     *  field counts only through a job in that field - so a land developer never meets "developer" in a software search. */
+    Map<String, Result> matchMust(Need need, String queryField) {
+        return match(need, false, need.isGeneric() && queryField != null ? queryField : null);
     }
 
     /** Ranking extras ("senior"): profile terms containing the need anywhere. */
     Map<String, Result> matchNice(Need need) {
-        return match(need, true);
+        return match(need, true, null);
     }
 
-    private Map<String, Result> match(Need need, boolean anywhere) {
+    /** @param onlyField when set, only job entries in this field count, and resume text (which has no field) is skipped */
+    private Map<String, Result> match(Need need, boolean anywhere, String onlyField) {
         String main = Terms.normalize(need.term());
         List<String> phrases = Stream.concat(Stream.of(main),
                         Optional.ofNullable(need.alternatives()).orElse(List.of()).stream().map(Terms::normalize))
@@ -67,6 +69,7 @@ class NeedMatcher {
 
         Map<String, Result> results = new HashMap<>();
         (anywhere ? expertise.findContaining(phrases) : expertise.findEndingWith(phrases)).stream()
+                .filter(h -> onlyField == null || ("profession".equalsIgnoreCase(h.kind()) && onlyField.equals(h.field())))
                 .collect(java.util.stream.Collectors.groupingBy(Hit::candidateId))
                 .forEach((id, hits) -> {
                     // A degree ("B.Tech Electrical Engineering") is not the profession itself - it counts as related.
@@ -77,6 +80,7 @@ class NeedMatcher {
                     results.put(id, exact.isEmpty() ? new Result(RELATED, hits, null) : new Result(EXACT, exact, null));
                 });
         phrases.stream()
+                .filter(p -> onlyField == null)
                 .filter(p -> p.matches("[a-z0-9 ]+")) // full-text search can't represent "c++", "c#", ".net"
                 .forEach(p -> textSearch.findContaining(p).forEach(id -> results.putIfAbsent(id, new Result(TEXT, List.of(), p))));
         return results;

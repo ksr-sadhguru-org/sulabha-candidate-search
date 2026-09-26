@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   ApplicantDetails,
   CandidateDetail,
+  FieldCount,
   ExtractedTextResponse,
   SearchResponse,
   TablesResponse,
@@ -41,6 +42,10 @@ export class ResumeApiService {
   /** One page of ranked results, starting at offset. */
   search(query: string, offset = 0, limit = PAGE_SIZE): Promise<SearchResponse> {
     return firstValueFrom(this.http.post<SearchResponse>(`${API_BASE}/query`, { query, offset, limit }));
+  }
+
+  getFields(): Promise<FieldCount[]> {
+    return firstValueFrom(this.http.get<FieldCount[]>(`${API_BASE}/fields`));
   }
 
   getCandidateDetail(candidateId: string): Promise<CandidateDetail> {

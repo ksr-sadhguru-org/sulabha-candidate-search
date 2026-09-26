@@ -94,11 +94,12 @@
           } @else if (state.detailFor(match.candidate_id); as detail) {
             <h3>Search profile</h3>
             <table class="profile-table">
-              <thead><tr><th>Area of expertise</th><th>From</th><th>Score</th><th>Years</th><th>Found by</th></tr></thead>
+              <thead><tr><th>Area of expertise</th><th>Field</th><th>From</th><th>Score</th><th>Years</th><th>Found by</th></tr></thead>
               <tbody>
                 @for (e of detail.expertise; track $index) {
                   <tr>
                     <td>{{ e.name }}</td>
+                    <td>{{ e.field ?? '' }}</td>
                     <td>{{ e.source === 'form' ? 'form' : 'resume' }}</td>
                     <td>{{ e.score }}</td>
                     <td>{{ e.years ?? '' }}</td>

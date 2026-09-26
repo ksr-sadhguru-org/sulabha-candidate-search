@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ResumeApiService } from '../../core/api.service';
+import { FieldCount } from '../../core/models';
 
 const CONFIRM_PHRASE = 'DELETE ALL DATA';
 
@@ -19,8 +20,20 @@ export class Admin {
   readonly clearingCache = signal(false);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  /** The growing field list job entries are labelled with - duplicates of the same field stand out here. */
+  readonly fields = signal<FieldCount[]>([]);
 
-  constructor(private readonly api: ResumeApiService) {}
+  constructor(private readonly api: ResumeApiService) {
+    void this.loadFields();
+  }
+
+  async loadFields(): Promise<void> {
+    try {
+      this.fields.set(await this.api.getFields());
+    } catch (err) {
+      console.error('Loading fields failed', err);
+    }
+  }
 
   get confirmed(): boolean {
     return this.confirmText().trim() === CONFIRM_PHRASE;

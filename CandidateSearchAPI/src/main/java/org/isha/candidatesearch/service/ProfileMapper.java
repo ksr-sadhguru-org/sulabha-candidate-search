@@ -2,6 +2,7 @@ package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.ExpertiseRepository.NewExpertise;
 import org.isha.candidatesearch.dto.Profile;
+import org.isha.candidatesearch.search.Fields;
 import org.isha.candidatesearch.search.SkillCompetencies;
 import org.isha.candidatesearch.search.Terms;
 
@@ -26,15 +27,20 @@ final class ProfileMapper {
     static List<NewExpertise> toExpertise(Profile profile, String skillCompetencies) {
         Stream<NewExpertise> fromResume = Objects.requireNonNullElse(profile.entries(), List.<Profile.Entry>of()).stream()
                 .filter(e -> e.name() != null && !e.name().isBlank())
-                .map(e -> new NewExpertise(e.name().strip(), e.kind(), "resume", score(e), e.years(),
+                .map(e -> new NewExpertise(e.name().strip(), e.kind(), jobField(e), "resume", score(e), e.years(),
                         terms(Stream.concat(Stream.of(e.name()), Objects.requireNonNullElse(e.terms(), List.<String>of()).stream()))));
         // The reviewed form list: a skill without years gets the candidate's total years.
         Stream<NewExpertise> fromForm = SkillCompetencies.parse(skillCompetencies).stream()
                 .map(s -> {
                     Double years = Objects.requireNonNullElse(s.years(), profile.totalYears());
-                    return new NewExpertise(s.name(), "skill", "form", scoreForYears(years, null), years, terms(Stream.of(s.name())));
+                    return new NewExpertise(s.name(), "skill", null, "form", scoreForYears(years, null), years, terms(Stream.of(s.name())));
                 });
         return Stream.concat(fromResume, fromForm).filter(e -> !e.terms().isEmpty()).toList();
+    }
+
+    /** Only job (profession) entries carry a field; skills count wherever they appear. */
+    static String jobField(Profile.Entry e) {
+        return "profession".equalsIgnoreCase(e.kind()) ? Fields.normalize(e.field()) : null;
     }
 
     private static int score(Profile.Entry e) {

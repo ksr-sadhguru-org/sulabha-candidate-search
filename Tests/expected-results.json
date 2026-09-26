@@ -9,6 +9,7 @@
       "exclude": "must not appear at all",
       "not_skill_match": "may appear as a text/keyword match, never as a profile/skill match",
       "related_below": "may appear, but only as a related/text match ranked below every direct profile match",
+      "partial": "must appear as a partial match (meets only some must-haves); partial matches always follow full ones",
       "order": "pairs [a, b]: a ranks above b",
       "filters": "expected filter result per candidate: pass | fail | not_on_file",
       "message": "case-insensitive substring of the message shown when there are no or unclear results",
@@ -52,7 +53,9 @@
     { "id": "A13", "candidate": "Aditi Deshpande", "expertise": [{ "name": "french*" }] },
     { "id": "B1", "file": "Rohan Kulkarni - Senior Java Developer (Resubmission).docx", "expect": "already_exists" },
     { "id": "B2", "file": "Vikram Patil - Java Developer (Updated).docx", "expect": "updated_existing", "candidate_count": { "Vikram Patil": 1 }, "expertise": [{ "name": "kotlin*" }] },
-    { "id": "B3", "candidate_count": { "Ravi Kumar": 2 } }
+    { "id": "B3", "candidate_count": { "Ravi Kumar": 2 } },
+    { "id": "A14", "candidate": "Prakash Menon", "job_fields": { "land developer": "civil & construction" } },
+    { "id": "A14", "candidate": "Rohan Kulkarni", "job_fields": { "java developer": "software & it" } }
   ],
 
   "queries": [
@@ -61,7 +64,7 @@
     { "id": "C3", "q": "tutor", "include": ["Geetha Ramachandran"] },
     { "id": "C3", "q": "yoga instructor", "first": ["Harish Chandran"] },
     { "id": "C4", "q": "c++ programmer", "not_skill_match": ["Farhan Ali", "Rohan Kulkarni", "Deepa Nair"] },
-    { "id": "C5", "q": "java and python developer", "first": ["Deepa Nair"], "not_skill_match": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"] },
+    { "id": "C5", "q": "java and python developer", "first": ["Deepa Nair"], "include": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"], "partial": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"], "exclude": ["Prakash Menon"] },
     { "id": "C6", "q": "senior carpenter", "first": ["Balaji Natarajan"], "include": ["Joseph Mathew"], "order": [["Balaji Natarajan", "Joseph Mathew"]], "not_skill_match": ["Rohan Kulkarni", "Anil Sharma", "Farhan Ali"] },
     { "id": "C7", "q": "spring boot", "include": ["Rohan Kulkarni", "Sneha Joshi", "Deepa Nair"] },
     { "id": "C8", "q": "plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
@@ -101,11 +104,11 @@
     { "id": "F4", "q": "Node.js", "include": ["Farhan Ali"] },
     { "id": "F5", "q": "anyone in India", "page_size": 5 },
 
-    { "id": "G1", "q": "senior developer with java skills in indore", "first": ["Rohan Kulkarni"], "include": ["Sneha Joshi", "Vikram Patil", "Sanjay Verma", "Deepa Nair"], "order": [["Rohan Kulkarni", "Vikram Patil"]], "filters": { "Rohan Kulkarni": { "location": "fail" } } },
+    { "id": "G1", "q": "senior developer with java skills in indore", "first": ["Rohan Kulkarni"], "include": ["Sneha Joshi", "Vikram Patil", "Sanjay Verma", "Deepa Nair"], "order": [["Rohan Kulkarni", "Vikram Patil"]], "exclude": ["Prakash Menon"], "filters": { "Rohan Kulkarni": { "location": "fail" } } },
     { "id": "G2", "q": "Person who knows Tally software and is in Pune", "first": ["Pooja Agarwal"], "include": ["Rakesh Jain"], "order": [["Pooja Agarwal", "Rakesh Jain"]], "related_below": ["Kavya Subramanian"], "filters": { "Pooja Agarwal": { "location": "pass" }, "Rakesh Jain": { "location": "fail" } } },
     { "id": "G3", "q": "Candidate who knows Java and is in Pune", "first": ["Rohan Kulkarni", "Priya Menon"], "include": ["Sneha Joshi", "Suresh Babu", "Deepa Nair"], "filters": { "Rohan Kulkarni": { "location": "pass" }, "Priya Menon": { "location": "pass" }, "Sneha Joshi": { "location": "fail" } } },
     { "id": "G4", "q": "Candidate who is an electrical engineer and is in coimbatore and is a meditator", "first": ["Senthil Kumar"], "include": ["Divya Raghavan"], "related_below": ["Murugan Selvam"], "filters": { "Senthil Kumar": { "location": "pass", "is_meditator": "pass" }, "Divya Raghavan": { "location": "fail", "is_meditator": "not_on_file" } } },
-    { "id": "G5", "q": "candidate who knows sanskrit and is a teacher", "first": ["Saraswati Iyer"], "not_skill_match": ["Meenakshi Sundaram", "Revathi Krishnan"] },
+    { "id": "G5", "q": "candidate who knows sanskrit and is a teacher", "first": ["Saraswati Iyer"] },
     { "id": "G6", "q": "Music teacher", "first": ["Meenakshi Sundaram"], "not_skill_match": ["Saraswati Iyer", "Revathi Krishnan", "Geetha Ramachandran"] },
     { "id": "G7", "q": "Plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
     { "id": "G8", "q": "Electrician", "first": ["Murugan Selvam"], "related_below": ["Senthil Kumar", "Divya Raghavan"] },

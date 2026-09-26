@@ -1,6 +1,7 @@
 package org.isha.candidatesearch.web;
 
 import jakarta.validation.Valid;
+import org.isha.candidatesearch.db.FieldRepository;
 import org.isha.candidatesearch.db.QueryCacheRepository;
 import org.isha.candidatesearch.db.SchemaService;
 import org.isha.candidatesearch.dto.ApplicantDetails;
@@ -36,16 +37,18 @@ public class ResumeController {
     private final SearchService search;
     private final SchemaService schema;
     private final QueryCacheRepository queryCache;
+    private final FieldRepository fields;
     private final ResumeTextExtractor extractor;
     private final LlmClient llm;
 
     public ResumeController(CandidateService candidates, BulkIngestService bulk, SearchService search, SchemaService schema,
-                            QueryCacheRepository queryCache, ResumeTextExtractor extractor, LlmClient llm) {
+                            QueryCacheRepository queryCache, FieldRepository fields, ResumeTextExtractor extractor, LlmClient llm) {
         this.candidates = candidates;
         this.bulk = bulk;
         this.search = search;
         this.schema = schema;
         this.queryCache = queryCache;
+        this.fields = fields;
         this.extractor = extractor;
         this.llm = llm;
     }
@@ -98,6 +101,12 @@ public class ResumeController {
     @PostMapping("/query")
     public SearchResponse query(@Valid @RequestBody QueryRequest request) {
         return search.search(request.query(), request.offsetOrDefault(), request.limitOrDefault());
+    }
+
+    /** The field list job entries are labelled with, and how many candidates are in each. */
+    @GetMapping("/fields")
+    public List<FieldRepository.FieldCount> fields() {
+        return fields.counts();
     }
 
     /** Forgets saved query readings only - use after a query prompt change; candidates are kept. */
