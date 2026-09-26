@@ -2,12 +2,13 @@ import { Component } from '@angular/core';
 import { SearchStateService } from '../../core/search-state.service';
 import { CandidateMatch, EMPTY_APPLICANT_DETAILS, FilterCheck, MatchedEntry } from '../../core/models';
 import { CandidateRecordEditor } from '../../shared/candidate-record-editor/candidate-record-editor';
+import { ExpandablePanel } from '../../shared/expandable-panel/expandable-panel';
 
 const STATUS_MARK: Record<FilterCheck['status'], string> = { pass: '✓', fail: '✗', not_on_file: '?' };
 
 @Component({
   selector: 'app-search',
-  imports: [CandidateRecordEditor],
+  imports: [CandidateRecordEditor, ExpandablePanel],
   templateUrl: './search.html',
   styleUrl: './search.css',
 })
@@ -65,6 +66,10 @@ export class Search {
 
   years(value: number): string {
     return years(value);
+  }
+
+  onLoadMore(): void {
+    void this.state.loadMore();
   }
 
   onSearch(): void {

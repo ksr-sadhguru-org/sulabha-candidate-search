@@ -11,6 +11,7 @@ import {
 } from './models';
 
 export const API_BASE = 'http://localhost:8000';
+export const PAGE_SIZE = 20;
 
 @Injectable({ providedIn: 'root' })
 export class ResumeApiService {
@@ -37,8 +38,9 @@ export class ResumeApiService {
     return firstValueFrom(this.http.post<ApplicantDetails>(`${API_BASE}/suggest_applicant_details`, { resume_text: resumeText }));
   }
 
-  search(query: string): Promise<SearchResponse> {
-    return firstValueFrom(this.http.post<SearchResponse>(`${API_BASE}/query`, { query }));
+  /** One page of ranked results, starting at offset. */
+  search(query: string, offset = 0, limit = PAGE_SIZE): Promise<SearchResponse> {
+    return firstValueFrom(this.http.post<SearchResponse>(`${API_BASE}/query`, { query, offset, limit }));
   }
 
   getCandidateDetail(candidateId: string): Promise<CandidateDetail> {

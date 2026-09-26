@@ -108,6 +108,8 @@ export interface SearchResponse {
   /** Shown when the query was unclear or matched no one. */
   message: string | null;
   results: CandidateMatch[];
+  /** How many matched in all - results is one page of them. */
+  total: number;
 }
 
 export interface ExpertiseView {

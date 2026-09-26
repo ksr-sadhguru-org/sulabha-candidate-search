@@ -19,72 +19,52 @@
 }
 
 @for (panel of panels(); track panel.candidateId) {
-  <div class="card panel">
-    <div
-      class="panel-header"
-      role="button"
-      tabindex="0"
-      (click)="togglePanel(panel.candidateId)"
-      (keydown.enter)="togglePanel(panel.candidateId)"
-      (keydown.space)="togglePanel(panel.candidateId)"
-    >
-      <strong class="panel-name" [class]="'state-' + panelState(panel)">{{ panel.fileName }}</strong>
-      <span class="panel-header-right">
-        @switch (panelState(panel)) {
-          @case ('extracting') {
-            <span class="hint">Extracting…</span>
-          }
-          @case ('ready') {
-            <span class="hint">Ready for review</span>
-          }
-          @case ('dirty') {
-            <span class="hint">Unsaved changes</span>
-          }
-          @case ('saved') {
-            <span class="badge badge-match">Saved</span>
-          }
-          @case ('duplicate') {
-            <span class="badge badge-duplicate has-tooltip" [attr.data-tooltip]="'Already saved as ' + panel.duplicateOf!.resume_name">Already exists</span>
-          }
-          @case ('save-error') {
-            <span class="error has-tooltip" [attr.data-tooltip]="panel.saveError">Save failed</span>
-          }
+  <app-expandable-panel [expanded]="panel.expanded" (toggled)="togglePanel(panel.candidateId)">
+    <strong panelTitle class="panel-name" [class]="'state-' + panelState(panel)">{{ panel.fileName }}</strong>
+    <span panelActions class="panel-actions">
+      @switch (panelState(panel)) {
+        @case ('extracting') {
+          <span class="hint">Extracting…</span>
         }
-        <button
-          class="btn-link"
-          type="button"
-          (click)="removePanel(panel.candidateId); $event.stopPropagation()"
-        >
-          Remove
-        </button>
-        <span class="chevron">{{ panel.expanded ? '▾' : '▸' }}</span>
-      </span>
-    </div>
-
-    <!-- [hidden], not @if, so the editor is instantiated as soon as extraction succeeds, even while
-         collapsed - otherwise "Save All" can't find it via viewChildren until the user opens the panel. -->
-    <div [hidden]="!panel.expanded">
-      @if (panel.extracting) {
-        <p class="hint">Extracting text and suggesting applicant details…</p>
-      } @else if (panel.error) {
-        <p class="error">{{ panel.error }}</p>
-      } @else if (panel.duplicateOf) {
-        <p class="hint">
-          This exact resume content is already saved as <strong>{{ panel.duplicateOf.resume_name }}</strong>
-          ({{ panel.duplicateOf.candidate_id }}). Remove this panel, or use Search to find and edit the existing record.
-        </p>
-      } @else {
-        <app-candidate-record-editor
-          [candidateId]="panel.candidateId"
-          [idEditable]="true"
-          [initialResumeName]="panel.fileName"
-          [initialResumeText]="panel.extractedText"
-          [initialApplicantDetails]="panel.applicantDetails"
-          (saved)="onPanelSaved(panel.candidateId)"
-          (dirtyChange)="onPanelDirtyChanged(panel.candidateId, $event)"
-          (saveFailed)="onPanelSaveFailed(panel.candidateId, $event)"
-        />
+        @case ('ready') {
+          <span class="hint">Ready for review</span>
+        }
+        @case ('dirty') {
+          <span class="hint">Unsaved changes</span>
+        }
+        @case ('saved') {
+          <span class="badge badge-match">Saved</span>
+        }
+        @case ('duplicate') {
+          <span class="badge badge-duplicate has-tooltip" [attr.data-tooltip]="'Already saved as ' + panel.duplicateOf!.resume_name">Already exists</span>
+        }
+        @case ('save-error') {
+          <span class="error has-tooltip" [attr.data-tooltip]="panel.saveError">Save failed</span>
+        }
       }
-    </div>
-  </div>
+      <button class="btn-link" type="button" (click)="removePanel(panel.candidateId); $event.stopPropagation()">Remove</button>
+    </span>
+
+    @if (panel.extracting) {
+      <p class="hint">Extracting text and suggesting applicant details…</p>
+    } @else if (panel.error) {
+      <p class="error">{{ panel.error }}</p>
+    } @else if (panel.duplicateOf) {
+      <p class="hint">
+        This exact resume content is already saved as <strong>{{ panel.duplicateOf.resume_name }}</strong>
+        ({{ panel.duplicateOf.candidate_id }}). Remove this panel, or use Search to find and edit the existing record.
+      </p>
+    } @else {
+      <app-candidate-record-editor
+        [candidateId]="panel.candidateId"
+        [idEditable]="true"
+        [initialResumeName]="panel.fileName"
+        [initialResumeText]="panel.extractedText"
+        [initialApplicantDetails]="panel.applicantDetails"
+        (saved)="onPanelSaved(panel.candidateId)"
+        (dirtyChange)="onPanelDirtyChanged(panel.candidateId, $event)"
+        (saveFailed)="onPanelSaveFailed(panel.candidateId, $event)"
+      />
+    }
+  </app-expandable-panel>
 }

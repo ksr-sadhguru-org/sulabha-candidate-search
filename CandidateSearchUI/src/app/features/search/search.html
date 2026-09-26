@@ -24,64 +24,60 @@
 
 @if (state.results(); as results) {
   @if (results.length) {
-    <h2>{{ results.length }} candidate{{ results.length === 1 ? '' : 's' }} found</h2>
+    <h2>{{ state.total() }} candidate{{ state.total() === 1 ? '' : 's' }} found</h2>
   }
   @if (state.message()) {
     <p class="search-message">{{ state.message() }}</p>
   }
 
   @for (match of results; track match.candidate_id) {
-    <div class="card result-card">
-      <div class="name-row">
-        <strong>{{ match.name || match.candidate_id }}</strong>
-        @if (match.name) {
-          <span class="candidate-id">{{ match.candidate_id }}</span>
-        }
+    <app-expandable-panel class="result-card" [expanded]="state.expandedId() === match.candidate_id" (toggled)="onToggleDetail(match.candidate_id)">
+      <strong panelTitle class="result-name">{{ match.name || match.candidate_id }}</strong>
+      @if (match.name) {
+        <span panelActions class="candidate-id">{{ match.candidate_id }}</span>
+      }
+
+      <div panelSummary>
+        <div class="badges-row">
+          @if (match.match_type !== 'filters') {
+            <span class="{{ matchClass(match) }} has-tooltip" [attr.data-tooltip]="matchTooltip(match)">
+              {{ matchLabel(match) }}:
+              {{ match.matched.length ? formatEntries(match.matched) : '' }}{{ match.matched.length && match.text_matches.length ? ', ' : '' }}{{ match.text_matches.join(', ') }}
+            </span>
+          }
+          @if (match.nice_matches.length) {
+            <span class="badge badge-keyword has-tooltip" data-tooltip="Extras from the query this candidate also has - they rank higher">
+              Also: {{ match.nice_matches.join(', ') }}
+            </span>
+          }
+          @if (match.filters.length) {
+            <span class="badge {{ filterBadgeClass(match) }}">{{ filterBadgeLabel(match) }}: {{ filterBadgeDetail(match) }}</span>
+          }
+        </div>
+
+        <dl class="details">
+          @if (match.total_years != null) {
+            <div><dt>Experience</dt><dd>{{ years(match.total_years) }}</dd></div>
+          } @else if (match.experience) {
+            <div><dt>Experience</dt><dd>{{ match.experience }}</dd></div>
+          }
+          @if (match.qualification) {
+            <div><dt>Qualification</dt><dd>{{ match.qualification }}</dd></div>
+          }
+          @if (match.job_location) {
+            <div><dt>Location</dt><dd>{{ match.job_location }}</dd></div>
+          }
+          @if (match.languages) {
+            <div><dt>Languages</dt><dd>{{ match.languages }}</dd></div>
+          }
+          @if (match.is_meditator) {
+            <div><dt>Meditator</dt><dd>{{ match.is_meditator }}</dd></div>
+          }
+          @if (match.stay_in_ashram) {
+            <div><dt>Stay in ashram</dt><dd>{{ match.stay_in_ashram }}</dd></div>
+          }
+        </dl>
       </div>
-
-      <div class="badges-row">
-        @if (match.match_type !== 'filters') {
-          <span class="{{ matchClass(match) }} has-tooltip" [attr.data-tooltip]="matchTooltip(match)">
-            {{ matchLabel(match) }}:
-            {{ match.matched.length ? formatEntries(match.matched) : '' }}{{ match.matched.length && match.text_matches.length ? ', ' : '' }}{{ match.text_matches.join(', ') }}
-          </span>
-        }
-        @if (match.nice_matches.length) {
-          <span class="badge badge-keyword has-tooltip" data-tooltip="Extras from the query this candidate also has - they rank higher">
-            Also: {{ match.nice_matches.join(', ') }}
-          </span>
-        }
-        @if (match.filters.length) {
-          <span class="badge {{ filterBadgeClass(match) }}">{{ filterBadgeLabel(match) }}: {{ filterBadgeDetail(match) }}</span>
-        }
-      </div>
-
-      <dl class="details">
-        @if (match.total_years != null) {
-          <div><dt>Experience</dt><dd>{{ years(match.total_years) }}</dd></div>
-        } @else if (match.experience) {
-          <div><dt>Experience</dt><dd>{{ match.experience }}</dd></div>
-        }
-        @if (match.qualification) {
-          <div><dt>Qualification</dt><dd>{{ match.qualification }}</dd></div>
-        }
-        @if (match.job_location) {
-          <div><dt>Location</dt><dd>{{ match.job_location }}</dd></div>
-        }
-        @if (match.languages) {
-          <div><dt>Languages</dt><dd>{{ match.languages }}</dd></div>
-        }
-        @if (match.is_meditator) {
-          <div><dt>Meditator</dt><dd>{{ match.is_meditator }}</dd></div>
-        }
-        @if (match.stay_in_ashram) {
-          <div><dt>Stay in ashram</dt><dd>{{ match.stay_in_ashram }}</dd></div>
-        }
-      </dl>
-
-      <button class="btn-link" (click)="onToggleDetail(match.candidate_id)">
-        {{ state.expandedId() === match.candidate_id ? 'Hide full record' : 'View full record' }}
-      </button>
 
       @if (state.expandedId() === match.candidate_id) {
         <div class="detail-panel">
@@ -116,6 +112,13 @@
           }
         </div>
       }
-    </div>
+    </app-expandable-panel>
+  }
+
+  @if (results.length < state.total()) {
+    <button class="btn-primary load-more" (click)="onLoadMore()" [disabled]="state.loadingMore()">
+      {{ state.loadingMore() ? 'Loading…' : 'Load more' }}
+    </button>
+    <span class="hint shortcut-hint">Showing {{ results.length }} of {{ state.total() }}</span>
   }
 }

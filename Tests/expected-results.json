@@ -99,6 +99,7 @@
 
     { "id": "F4", "q": "C# .NET developer", "first": ["Farhan Ali"] },
     { "id": "F4", "q": "Node.js", "include": ["Farhan Ali"] },
+    { "id": "F5", "q": "anyone in India", "page_size": 5 },
 
     { "id": "G1", "q": "senior developer with java skills in indore", "first": ["Rohan Kulkarni"], "include": ["Sneha Joshi", "Vikram Patil", "Sanjay Verma", "Deepa Nair"], "order": [["Rohan Kulkarni", "Vikram Patil"]], "filters": { "Rohan Kulkarni": { "location": "fail" } } },
     { "id": "G2", "q": "Person who knows Tally software and is in Pune", "first": ["Pooja Agarwal"], "include": ["Rakesh Jain"], "order": [["Pooja Agarwal", "Rakesh Jain"]], "related_below": ["Kavya Subramanian"], "filters": { "Pooja Agarwal": { "location": "pass" }, "Rakesh Jain": { "location": "fail" } } },

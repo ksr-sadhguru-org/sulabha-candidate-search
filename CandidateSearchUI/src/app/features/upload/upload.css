@@ -2,24 +2,6 @@
   margin-bottom: 1rem;
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  margin-bottom: 0.75rem;
-}
-
-.panel-header-right {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.chevron {
-  color: #64748b;
-}
-
 /* Panel name color tracks lifecycle state: extracting -> ready for review -> edited (dirty) -> saved. */
 .panel-name.state-extracting {
   color: #94a3b8;

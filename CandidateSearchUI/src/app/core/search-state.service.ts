@@ -8,6 +8,11 @@ export class SearchStateService {
   readonly queryText = signal('');
   readonly loading = signal(false);
   readonly results = signal<CandidateMatch[] | null>(null);
+  /** How many matched in all; results holds the pages loaded so far. */
+  readonly total = signal(0);
+  readonly loadingMore = signal(false);
+  /** The query the shown results belong to - Load more continues it even if the box was edited since. */
+  private searchedQuery = '';
   /** The backend's note for an unclear or unmatched query. */
   readonly message = signal<string | null>(null);
   readonly errorMessage = signal<string | null>(null);
@@ -32,7 +37,9 @@ export class SearchStateService {
     this.errorMessage.set(null);
     try {
       const response = await this.api.search(query);
+      this.searchedQuery = query;
       this.results.set(response.results);
+      this.total.set(response.total);
       this.message.set(response.message);
     } catch (err) {
       console.error('Search failed', err);
@@ -41,6 +48,23 @@ export class SearchStateService {
       this.message.set(null);
     } finally {
       this.loading.set(false);
+    }
+  }
+
+  /** Appends the next page of the current search. */
+  async loadMore(): Promise<void> {
+    const shown = this.results() ?? [];
+    this.loadingMore.set(true);
+    this.errorMessage.set(null);
+    try {
+      const response = await this.api.search(this.searchedQuery, shown.length);
+      this.results.set([...shown, ...response.results]);
+      this.total.set(response.total);
+    } catch (err) {
+      console.error('Load more failed', err);
+      this.errorMessage.set(backendMessage(err) ?? 'Could not load more results - is the backend running at localhost:8000?');
+    } finally {
+      this.loadingMore.set(false);
     }
   }
 

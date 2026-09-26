@@ -2,6 +2,7 @@ import { ChangeDetectorRef, Component, HostListener, signal, viewChildren } from
 import { backendMessage, ResumeApiService } from '../../core/api.service';
 import { ApplicantDetails, DuplicateMatch, EMPTY_APPLICANT_DETAILS } from '../../core/models';
 import { CandidateRecordEditor } from '../../shared/candidate-record-editor/candidate-record-editor';
+import { ExpandablePanel } from '../../shared/expandable-panel/expandable-panel';
 
 interface UploadPanel {
   candidateId: string;
@@ -28,7 +29,7 @@ type PanelState = 'extracting' | 'error' | 'duplicate' | 'save-error' | 'dirty' 
  */
 @Component({
   selector: 'app-upload',
-  imports: [CandidateRecordEditor],
+  imports: [CandidateRecordEditor, ExpandablePanel],
   templateUrl: './upload.html',
   styleUrl: './upload.css',
 })

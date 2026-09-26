@@ -55,16 +55,17 @@ public class SearchService {
         this.candidates = candidates;
     }
 
-    public SearchResponse search(String query) {
+    /** The ranked page [offset, offset + limit) of everyone matching; total counts them all. */
+    public SearchResponse search(String query, int offset, int limit) {
         ParsedQuery q = parser.parse(query);
         // Only extras asked for ("senior") - treat them as the must-haves rather than listing everyone.
         List<Need> must = q.must().isEmpty() ? q.nice() : q.must();
         List<Need> nice = q.must().isEmpty() ? List.of() : q.nice();
         if (!q.understood()) {
-            return new SearchResponse(NOT_UNDERSTOOD, q, List.of());
+            return new SearchResponse(NOT_UNDERSTOOD, q, List.of(), 0);
         }
         if (must.isEmpty() && !FilterEvaluator.hasAny(q.filters())) {
-            return new SearchResponse(TOO_VAGUE, q, List.of());
+            return new SearchResponse(TOO_VAGUE, q, List.of(), 0);
         }
 
         List<Map<String, Result>> mustResults = must.stream().map(matcher::matchMust).toList();
@@ -79,7 +80,8 @@ public class SearchService {
                 .sorted(RANKING)
                 .map(Ranked::match)
                 .toList();
-        return new SearchResponse(results.isEmpty() ? noMatchMessage(must, q) : null, q, results);
+        List<CandidateMatch> page = results.stream().skip(offset).limit(limit).toList();
+        return new SearchResponse(results.isEmpty() ? noMatchMessage(must, q) : null, q, page, results.size());
     }
 
     private Ranked rank(Row row, ParsedQuery q, List<Need> must, List<Map<String, Result>> mustResults,

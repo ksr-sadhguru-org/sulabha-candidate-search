@@ -97,7 +97,7 @@ public class ResumeController {
 
     @PostMapping("/query")
     public SearchResponse query(@Valid @RequestBody QueryRequest request) {
-        return search.search(request.query());
+        return search.search(request.query(), request.offsetOrDefault(), request.limitOrDefault());
     }
 
     /** Forgets saved query readings only - use after a query prompt change; candidates are kept. */

@@ -158,7 +158,8 @@ for (const u of spec.uploads) {
 // ---------- query checks ----------
 const FIELD = { location: 'jobLocation', experience: 'experience', is_meditator: 'isMeditator', stay_in_ashram: 'stayInAshram', languages: 'languages' };
 const cache = {};
-const search = async q => (cache[q] ??= (await call('POST', '/query', { query: q })).json);
+// limit 100: every check sees the whole ranked list, not just the first page.
+const search = async q => (cache[q] ??= (await call('POST', '/query', { query: q, limit: 100 })).json);
 const people = r => (r.results ?? []).map(m => idToPerson[m.candidate_id] ?? m.name);
 
 for (const c of spec.queries) {
@@ -193,6 +194,14 @@ for (const c of spec.queries) {
     }
     if (c.count_max != null) record(c.id, `${tag} at most ${c.count_max} results`, names.length <= c.count_max, brief);
     if (c.message) record(c.id, `${tag} message ~ "${c.message}"`, (r.message ?? '').toLowerCase().includes(c.message.toLowerCase()), r.message);
+    if (c.page_size) {
+      const pages = [];
+      for (let offset = 0; offset < r.total; offset += c.page_size) {
+        pages.push(...people((await call('POST', '/query', { query: c.q, offset, limit: c.page_size })).json));
+      }
+      record(c.id, `${tag} pages of ${c.page_size} join up to the full ${r.total} results in order`,
+        r.total > c.page_size && JSON.stringify(pages) === JSON.stringify(names), `pages [${pages}] vs all [${names}]`);
+    }
     if (c.parsed_location) {
       const l = r.parsed?.filters?.location; const got = l && [l.city, l.state, l.country].filter(Boolean).join(', ');
       record(c.id, `${tag} location parsed as ${c.parsed_location}`, got === c.parsed_location, got);
@@ -202,7 +211,7 @@ for (const c of spec.queries) {
       record(c.id, `${tag} same results as "${c.same_results_as}"`, JSON.stringify([...names].sort()) === JSON.stringify([...other].sort()), `${names} vs ${other}`);
     }
     if (c.repeat) {
-      const runs = []; for (let i = 0; i < c.repeat; i++) runs.push(people((await call('POST', '/query', { query: c.q })).json).join('|'));
+      const runs = []; for (let i = 0; i < c.repeat; i++) runs.push(people((await call('POST', '/query', { query: c.q, limit: 100 })).json).join('|'));
       record(c.id, `${tag} same order over ${c.repeat} runs`, new Set(runs).size === 1, runs.join(' // '));
     }
   } catch (e) { record(c.id, tag, false, e.message); }
