@@ -83,8 +83,9 @@ export interface FilterCheck {
 }
 
 /** profile: every must-have in the search profile; related: some via an equivalent; text: some only in the
- *  resume text; partial: only some of the must-haves met; filters: a filter-only search. */
-export type MatchType = 'profile' | 'related' | 'text' | 'partial' | 'filters';
+ *  resume text; partial: only some of the must-haves met; field: none met, but a job in the same field as the
+ *  direct matches; filters: a filter-only search. */
+export type MatchType = 'profile' | 'related' | 'text' | 'partial' | 'field' | 'filters';
 
 export interface CandidateMatch {
   candidate_id: string;

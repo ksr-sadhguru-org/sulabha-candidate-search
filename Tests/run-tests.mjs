@@ -183,7 +183,15 @@ for (const c of spec.queries) {
     const types = (r.results ?? []).map(m => m.match_type);
     if (types.includes('partial')) {
       const firstPartial = types.indexOf('partial');
-      record(c.id, `${tag} partial matches all follow the full matches`, types.slice(firstPartial).every(t => t === 'partial'), brief);
+      record(c.id, `${tag} partial matches all follow the full matches`, types.slice(firstPartial).every(t => t === 'partial' || t === 'field'), brief);
+    }
+    if (types.includes('field')) {
+      const firstField = types.indexOf('field');
+      record(c.id, `${tag} same-field matches all come last`, types.slice(firstField).every(t => t === 'field'), brief);
+    }
+    if (c.same_field) {
+      const bad = c.same_field.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'field'; });
+      record(c.id, `${tag} ${c.same_field.join(', ')} shown as same-field related matches`, !bad.length, `not same-field: ${bad} | ${brief}`);
     }
     if (c.partial) {
       const bad = c.partial.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'partial'; });

@@ -2,6 +2,7 @@ package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.CandidateRepository;
 import org.isha.candidatesearch.db.CandidateRepository.Row;
+import org.isha.candidatesearch.db.ExpertiseRepository;
 import org.isha.candidatesearch.db.ExpertiseRepository.Hit;
 import org.isha.candidatesearch.dto.CandidateMatch;
 import org.isha.candidatesearch.dto.CandidateMatch.FilterCheck;
@@ -24,8 +25,10 @@ import java.util.stream.Stream;
 
 /**
  * Search: parse the query (cached), find who meets the must-haves, check filters, rank.
- * Ranking, strongest first: how many must-haves are met (all before some), how they were found (profile > equivalent
- * > resume text), then filters passed, then ranking extras met ("senior"), then profile score, then relevant years.
+ * When the query names skills, a generic job word in it ("developer") is context: it restricts the field and
+ * ranks, but is not counted as a must-have. Others with a job in the same field as the direct matches follow last.
+ * Ranking, strongest first: how many must-haves are met (all, some, none - same field only), how they were found
+ * (profile > equivalent > resume text), then filters passed, then ranking extras met ("senior"), score, relevant years.
  */
 @Service
 public class SearchService {
@@ -49,19 +52,24 @@ public class SearchService {
     private final QueryParser parser;
     private final NeedMatcher matcher;
     private final CandidateRepository candidates;
+    private final ExpertiseRepository expertise;
 
-    public SearchService(QueryParser parser, NeedMatcher matcher, CandidateRepository candidates) {
+    public SearchService(QueryParser parser, NeedMatcher matcher, CandidateRepository candidates, ExpertiseRepository expertise) {
         this.parser = parser;
         this.matcher = matcher;
         this.candidates = candidates;
+        this.expertise = expertise;
     }
 
     /** The ranked page [offset, offset + limit) of everyone matching; total counts them all. */
     public SearchResponse search(String query, int offset, int limit) {
         ParsedQuery q = parser.parse(query);
         // Only extras asked for ("senior") - treat them as the must-haves rather than listing everyone.
-        List<Need> must = q.must().isEmpty() ? q.nice() : q.must();
-        List<Need> nice = q.must().isEmpty() ? List.of() : q.nice();
+        List<Need> asked = q.must().isEmpty() ? q.nice() : q.must();
+        boolean namesSkill = asked.stream().anyMatch(n -> !n.isGeneric());
+        List<Need> must = namesSkill ? asked.stream().filter(n -> !n.isGeneric()).toList() : asked;
+        List<Need> nice = Stream.concat(q.must().isEmpty() ? Stream.<Need>empty() : q.nice().stream(),
+                namesSkill ? asked.stream().filter(Need::isGeneric) : Stream.<Need>empty()).toList();
         if (!q.understood()) {
             return new SearchResponse(NOT_UNDERSTOOD, q, List.of(), 0);
         }
@@ -70,16 +78,20 @@ public class SearchService {
         }
 
         // The field only restricts a query that names a specific skill; a generic job alone ("teacher") stays open.
-        String field = must.stream().anyMatch(n -> !n.isGeneric()) ? q.field() : null;
+        String field = namesSkill ? q.field() : null;
         List<Map<String, Result>> mustResults = must.stream().map(n -> matcher.matchMust(n, field)).toList();
         List<Map<String, Result>> niceResults = nice.stream().map(matcher::matchNice).toList();
         // Everyone meeting at least one must-have (those meeting all rank first); a filter-only query considers
         // everyone and keeps those passing all filters.
         Set<String> ids = must.isEmpty() ? null : mustResults.stream().flatMap(m -> m.keySet().stream())
                 .collect(java.util.stream.Collectors.toSet());
+        Map<String, Hit> sameField = must.isEmpty() ? Map.of() : sameFieldJobs(mustResults, q.field(), ids);
+        if (ids != null) {
+            ids.addAll(sameField.keySet());
+        }
 
         List<CandidateMatch> results = candidates.findRows(ids).values().stream()
-                .map(row -> rank(row, q, must, mustResults, nice, niceResults))
+                .map(row -> rank(row, q, must, mustResults, nice, niceResults, sameField.get(row.id())))
                 .filter(r -> !must.isEmpty() || r.match().filtersPassed() == r.match().filters().size())
                 .sorted(RANKING)
                 .map(Ranked::match)
@@ -88,8 +100,28 @@ public class SearchService {
         return new SearchResponse(results.isEmpty() ? noMatchMessage(must, q) : null, q, page, results.size());
     }
 
+    /**
+     * Candidates not matched yet whose job is in the same field as the direct matches: the most common field among
+     * the jobs that matched (a Java trainer doesn't make "java developer" a teaching search), or the query's field
+     * when no job matched. The best such job per candidate.
+     */
+    private Map<String, Hit> sameFieldJobs(List<Map<String, Result>> mustResults, String queryField, Set<String> matched) {
+        Map<String, Long> jobFields = mustResults.stream().flatMap(m -> m.values().stream())
+                .filter(r -> r.quality() >= NeedMatcher.RELATED)
+                .flatMap(r -> r.hits().stream())
+                .filter(h -> "profession".equalsIgnoreCase(h.kind()) && h.field() != null)
+                .collect(java.util.stream.Collectors.groupingBy(Hit::field, java.util.stream.Collectors.counting()));
+        long most = jobFields.values().stream().mapToLong(Long::longValue).max().orElse(0);
+        Set<String> fields = most > 0
+                ? jobFields.entrySet().stream().filter(e -> e.getValue() == most).map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet())
+                : queryField == null ? Set.of() : Set.of(queryField);
+        return expertise.findJobsInFields(fields).stream()
+                .filter(h -> !matched.contains(h.candidateId()))
+                .collect(java.util.stream.Collectors.toMap(Hit::candidateId, h -> h, (a, b) -> a.score() >= b.score() ? a : b));
+    }
+
     private Ranked rank(Row row, ParsedQuery q, List<Need> must, List<Map<String, Result>> mustResults,
-                        List<Need> nice, List<Map<String, Result>> niceResults) {
+                        List<Need> nice, List<Map<String, Result>> niceResults, Hit sameFieldJob) {
         List<Result> perNeed = mustResults.stream().map(m -> m.get(row.id())).toList(); // null: need not met
         List<Result> met = perNeed.stream().filter(Objects::nonNull).toList();
         List<FilterCheck> filters = Stream.concat(FilterEvaluator.evaluate(q.filters(), row).stream(),
@@ -98,12 +130,20 @@ public class SearchService {
                 .filter(i -> niceResults.get(i).containsKey(row.id())).mapToObj(i -> nice.get(i).term()).toList();
         int quality = met.stream().mapToInt(Result::quality).min().orElse(0);
 
-        String type = !must.isEmpty() && met.size() < must.size() ? "partial" : matchType(must.isEmpty(), quality);
+        String type = sameFieldJob != null && met.isEmpty() ? "field"
+                : !must.isEmpty() && met.size() < must.size() ? "partial" : matchType(must.isEmpty(), quality);
+        List<MatchedEntry> entries = sameFieldJob != null && met.isEmpty()
+                ? List.of(new MatchedEntry(sameFieldJob.name(), sameFieldJob.score(), sameFieldJob.years(), "same field: " + sameFieldJob.field(), true))
+                : matchedEntries(met);
         CandidateMatch match = new CandidateMatch(row.id(), row.name(), type, met.size(), must.size(),
-                matchedEntries(met), met.stream().map(Result::textTerm).filter(Objects::nonNull).distinct().toList(), niceMet,
+                entries, met.stream().map(Result::textTerm).filter(Objects::nonNull).distinct().toList(), niceMet,
                 filters, (int) filters.stream().filter(f -> FilterEvaluator.PASS.equals(f.status())).count(),
                 row.experience(), row.totalYears(), row.qualification(), row.jobLocation(), row.languages(),
                 row.isMeditator(), row.stayInAshram());
+        if (sameFieldJob != null && met.isEmpty()) {
+            return new Ranked(match, 0, NeedMatcher.SAME_FIELD, niceMet.size(), sameFieldJob.score(),
+                    Objects.requireNonNullElse(sameFieldJob.years(), 0.0));
+        }
         return new Ranked(match, met.size(), quality, niceMet.size(), met.stream().mapToInt(Result::bestScore).sum(),
                 met.stream().map(Result::years).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum());
     }

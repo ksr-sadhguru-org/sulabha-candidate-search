@@ -62,6 +62,16 @@ public class ExpertiseRepository {
                 .list();
     }
 
+    /** Every job entry in these fields - for "same field" related matches. term is empty (no phrase matched). */
+    public List<Hit> findJobsInFields(Collection<String> fields) {
+        return fields.isEmpty() ? List.of() : jdbc.sql("""
+                        SELECT e.candidate_id, e.id AS expertise_id, e.name, e.kind, e.field, e.source, e.score,
+                               e.years::float8 AS years, '' AS term
+                        FROM expertise e WHERE e.kind = 'profession' AND e.field IN (:fields)""")
+                .param("fields", fields)
+                .query(Hit.class).list();
+    }
+
     /** Terms equal to a phrase or ending with it as whole words ("music teacher" for "teacher"). */
     public List<Hit> findEndingWith(Collection<String> phrases) {
         return phrases.isEmpty() ? List.of() : jdbc.sql(HIT_SELECT + "WHERE t.term IN (:phrases) OR t.term LIKE ANY (ARRAY[:suffixes])")
