@@ -20,7 +20,8 @@ final class Prompts {
               E.g. music teacher = teacher + music; tabla player = performer + music; maths tutor = teacher + mathematics &
               science; electrician = tradesperson + electrical; electrical engineer = engineer / developer + electrical;
               java developer = engineer / developer + software & it; qa engineer = tester / qa + software & it; java trainer
-              = teacher + software & it; land developer = engineer / developer + property & real estate; plumber =
+              = teacher + software & it; land developer or builder = engineer / developer + construction & real estate;
+              plumber =
               tradesperson + plumbing; yoga instructor = teacher + yoga & wellness; intern = trainee.
             - terms: lowercase words and phrases an HR search might use that this entry proves: the name, synonyms,
               abbreviations, the plain profession ("java developer" for "Senior Java Developer"), both trade forms
@@ -56,13 +57,17 @@ final class Prompts {
               role, one of: %s. domain, from: %s.
               E.g. "music instructor" = teacher + music; "trades" = tradesperson; "music" = domain music; "teacher" =
               teacher; "electrician" = tradesperson + electrical; "java developer" = engineer / developer + software & it;
-              "accountant" = professional + accounting & finance. An unlisted job ("astronaut") leaves both null.
+              "accountant" = professional + accounting & finance; "builder", "land developer" = engineer / developer +
+              construction & real estate. A bare job word with nothing else pointing to a domain leaves it null:
+              "developer", "senior developer" = engineer / developer, domain null; but "developer with java skills" =
+              engineer / developer + software & it. An unlisted job ("astronaut") leaves both null.
             - job: the job asked for as worded, or null when none is asked:
               term: lowercase, singular ("music instructor"). alternatives: other words for the same job a resume might use
               ("music teacher", "music tutor"), keeping the subject words - never a bare "teacher" or "developer".
               minYears: years of experience tied to the job ("electrician with 5+ years" -> 5), else null.
             - must: the specific skills, tools or languages asked for, each one term - including one named in the job title
-              ("java developer" -> "java"; "java and python developer" -> "java", "python"; "knows tally" -> "tally";
+              ("java developer" -> "java"; "java and python developer" and "python, java developer" -> "java", "python";
+              "knows tally" -> "tally";
               "sanskrit teacher" -> "sanskrit"). Not the job itself. Years asked with the job belong to its skill
               ("java developer with 8+ years" -> "java", minYears 8).
               term: lowercase, as a resume would write it ("tally", not "tally software"). alternatives: equivalents and

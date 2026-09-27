@@ -37,7 +37,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | A11 | Skill competencies with years   | Plumber resume                               | `Plumbing (8 years), Pipe Fitting (8 years), ...` pre-filled |
 | A12 | Location pre-fill               | Resume says "Coimbatore"                     | Form shows "Coimbatore, Tamil Nadu, India"                   |
 | A13 | Language as work                | French translator                            | "French" entry (skill), not just a spoken-language field     |
-| A14 | Job labels                   | Music teacher, tabla player, electrician, QA, land developer | teacher + music; performer + music; tradesperson + electrical; tester / qa + software & it; engineer / developer + property & real estate |
+| A14 | Job labels                   | Music teacher, tabla player, electrician, QA, land developer | teacher + music; performer + music; tradesperson + electrical; tester / qa + software & it; engineer / developer + construction & real estate |
 
 ## B. Duplicates
 
@@ -70,6 +70,8 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | C18 | Same job, other wording | "music instructor" | The music teacher, and the tabla player as a same-field related match; never the maths tutor or other teachers |
 | C19 | Same domain, no skill         | "Java developer in india with 8+ years experience"   | Java developers first; other software developers (Python, .NET) follow as partial matches (the job without Java) |
 | C20 | Role or domain alone          | "trades", "music" | "trades" = the tradesperson role in any domain (plumbers, carpenters, electricians - not electrical engineers); "music" = the music domain in any role |
+| C21 | Skills listed before a job | "python, java developer in mumbai" vs "java developer in mumbai" | Both read java as a skill: Deepa (both skills) first, then one-skill people with the Mumbai Java developer ahead; "java developer in mumbai" puts him first |
+| C22 | Construction and bare "developer" | "land developer", "builder", "construction", "developer" | The land developer is found by each; a bare "developer" is open - software developers and the land developer |
 | C16 | Broad job category                | "software engineer", "software developer"            | Every programming role (Java, Python, .NET, full stack, etc.); adjacent QA / former programmers as related, ranked below; never electrical engineers, electricians or a land developer |
 
 ## D. Ranking

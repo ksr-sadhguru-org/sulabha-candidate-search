@@ -31,7 +31,7 @@ public class SchemaService {
 
     /** Seed for the domains table; the AI adds a new domain only when none of the existing ones fits. */
     public static final List<String> STARTER_DOMAINS = Stream.of(
-            "software & it", "electrical", "mechanical", "civil & construction", "property & real estate", "music",
+            "software & it", "electrical", "mechanical", "construction & real estate", "music",
             "dance & theatre", "visual arts & design", "languages & literature", "mathematics & science",
             "early childhood", "accounting & finance", "management & administration", "healthcare", "yoga & wellness",
             "food & hospitality", "plumbing", "carpentry & woodwork", "masonry & tiling", "painting",
