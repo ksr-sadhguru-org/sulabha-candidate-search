@@ -2,17 +2,17 @@ package org.isha.candidatesearch.dto;
 
 import java.util.List;
 
-/** The LLM's reading of an HR query. field: the field the query's skills or job belong to (null when it names none);
- *  must: what a candidate has to be or know; nice: ranking-only extras; filters: form-field checks shown per candidate. */
-public record ParsedQuery(Boolean understood, String field, List<Need> must, List<Need> nice, Filters filters) {
+/**
+ * The LLM's reading of an HR query.
+ * role / domain: the job asked for - its kind of work and its subject - each from the known lists, null when unsaid.
+ * job: the job as worded, with alternatives, for matching profile terms (null when no job is asked).
+ * must: specific skills, tools or languages a candidate must have. nice: ranking-only extras (seniority, education).
+ */
+public record ParsedQuery(Boolean understood, String role, String domain, Need job, List<Need> must, List<Need> nice,
+                          Filters filters) {
 
-    /** generic: a job word that means different things in different fields ("developer", "engineer", "teacher") -
-     *  it only counts through a job in the query's field. minYears: years tied to this need, else null. */
-    public record Need(String term, List<String> alternatives, Boolean generic, Double minYears) {
-
-        public boolean isGeneric() {
-            return Boolean.TRUE.equals(generic);
-        }
+    /** minYears: years of experience tied to this need ("python developer with 8+ years"), else null. */
+    public record Need(String term, List<String> alternatives, Double minYears) {
     }
 
     public record Location(String city, String state, String country) {

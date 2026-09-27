@@ -1,7 +1,7 @@
 package org.isha.candidatesearch.web;
 
 import jakarta.validation.Valid;
-import org.isha.candidatesearch.db.FieldRepository;
+import org.isha.candidatesearch.db.DomainRepository;
 import org.isha.candidatesearch.db.QueryCacheRepository;
 import org.isha.candidatesearch.db.SchemaService;
 import org.isha.candidatesearch.dto.ApplicantDetails;
@@ -16,6 +16,7 @@ import org.isha.candidatesearch.dto.UploadRequest;
 import org.isha.candidatesearch.dto.UploadResponse;
 import org.isha.candidatesearch.extraction.ResumeTextExtractor;
 import org.isha.candidatesearch.llm.LlmClient;
+import org.isha.candidatesearch.search.Roles;
 import org.isha.candidatesearch.service.BulkIngestService;
 import org.isha.candidatesearch.service.CandidateService;
 import org.isha.candidatesearch.service.SearchService;
@@ -37,18 +38,18 @@ public class ResumeController {
     private final SearchService search;
     private final SchemaService schema;
     private final QueryCacheRepository queryCache;
-    private final FieldRepository fields;
+    private final DomainRepository domains;
     private final ResumeTextExtractor extractor;
     private final LlmClient llm;
 
     public ResumeController(CandidateService candidates, BulkIngestService bulk, SearchService search, SchemaService schema,
-                            QueryCacheRepository queryCache, FieldRepository fields, ResumeTextExtractor extractor, LlmClient llm) {
+                            QueryCacheRepository queryCache, DomainRepository domains, ResumeTextExtractor extractor, LlmClient llm) {
         this.candidates = candidates;
         this.bulk = bulk;
         this.search = search;
         this.schema = schema;
         this.queryCache = queryCache;
-        this.fields = fields;
+        this.domains = domains;
         this.extractor = extractor;
         this.llm = llm;
     }
@@ -103,10 +104,16 @@ public class ResumeController {
         return search.search(request.query(), request.offsetOrDefault(), request.limitOrDefault());
     }
 
-    /** The field list job entries are labelled with, and how many candidates are in each. */
-    @GetMapping("/fields")
-    public List<FieldRepository.FieldCount> fields() {
-        return fields.counts();
+    /** The domain list jobs are labelled with (it grows), and how many candidates are in each. */
+    @GetMapping("/domains")
+    public List<DomainRepository.DomainCount> domains() {
+        return domains.counts();
+    }
+
+    /** The fixed role list jobs are labelled with. */
+    @GetMapping("/roles")
+    public List<String> roles() {
+        return Roles.ALL;
     }
 
     /** Forgets saved query readings only - use after a query prompt change; candidates are kept. */

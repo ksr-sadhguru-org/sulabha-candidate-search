@@ -2,11 +2,11 @@ package org.isha.candidatesearch.search;
 
 import java.util.Locale;
 
-/** One spelling per field, so "Software and IT", "software & it " and "Software & IT" are the same field,
+/** One spelling per domain, so "Software and IT", "software & it " and "Software & IT" are the same domain,
  *  and "Trades - Plumbing" is "trades-plumbing". */
-public final class Fields {
+public final class Domains {
 
-    private Fields() {
+    private Domains() {
     }
 
     /** Lowercase, "and" as "&", "-" without spaces around it, single spaces; null or blank stays null. */

@@ -14,16 +14,17 @@ import java.util.Set;
 public class ExpertiseRepository {
 
     /** One expertise row to store. terms must already be normalized. */
-    public record NewExpertise(String name, String kind, String field, String source, int score, Double years, Set<String> terms) {
+    public record NewExpertise(String name, String kind, String role, String domain, String source, int score, Double years,
+                               Set<String> terms) {
     }
 
     /** One stored term that matched a query phrase, with the expertise row it belongs to. */
-    public record Hit(String candidateId, int expertiseId, String name, String kind, String field, String source, int score,
-                      Double years, String term) {
+    public record Hit(String candidateId, int expertiseId, String name, String kind, String role, String domain, String source,
+                      int score, Double years, String term) {
     }
 
     private static final String HIT_SELECT = """
-            SELECT t.candidate_id, e.id AS expertise_id, e.name, e.kind, e.field, e.source, e.score, e.years::float8 AS years, t.term
+            SELECT t.candidate_id, e.id AS expertise_id, e.name, e.kind, e.role, e.domain, e.source, e.score, e.years::float8 AS years, t.term
             FROM expertise_terms t JOIN expertise e ON e.id = t.expertise_id
             """;
 
@@ -37,9 +38,10 @@ public class ExpertiseRepository {
         jdbc.sql("DELETE FROM expertise WHERE candidate_id = :id").param("id", candidateId).update();
         expertise.forEach(e -> {
             int id = jdbc.sql("""
-                            INSERT INTO expertise (candidate_id, name, kind, field, source, score, years)
-                            VALUES (:candidateId, :name, :kind, :field, :source, :score, :years) RETURNING id""")
-                    .param("candidateId", candidateId).param("name", e.name()).param("kind", e.kind()).param("field", e.field())
+                            INSERT INTO expertise (candidate_id, name, kind, role, domain, source, score, years)
+                            VALUES (:candidateId, :name, :kind, :role, :domain, :source, :score, :years) RETURNING id""")
+                    .param("candidateId", candidateId).param("name", e.name()).param("kind", e.kind())
+                    .param("role", e.role()).param("domain", e.domain())
                     .param("source", e.source()).param("score", e.score()).param("years", e.years())
                     .query(Integer.class).single();
             e.terms().forEach(term -> jdbc.sql("""
@@ -52,23 +54,25 @@ public class ExpertiseRepository {
 
     public List<ExpertiseView> findByCandidate(String candidateId) {
         return jdbc.sql("""
-                        SELECT e.name, e.kind, e.field, e.source, e.score, e.years::float8 AS years, STRING_AGG(t.term, '|' ORDER BY t.term) AS terms
+                        SELECT e.name, e.kind, e.role, e.domain, e.source, e.score, e.years::float8 AS years, STRING_AGG(t.term, '|' ORDER BY t.term) AS terms
                         FROM expertise e LEFT JOIN expertise_terms t ON t.expertise_id = e.id
                         WHERE e.candidate_id = :id GROUP BY e.id ORDER BY e.source DESC, e.score DESC""")
                 .param("id", candidateId)
-                .query((rs, n) -> new ExpertiseView(rs.getString("name"), rs.getString("kind"), rs.getString("field"), rs.getString("source"),
+                .query((rs, n) -> new ExpertiseView(rs.getString("name"), rs.getString("kind"), rs.getString("role"), rs.getString("domain"), rs.getString("source"),
                         rs.getInt("score"), rs.getObject("years", Double.class),
                         rs.getString("terms") == null ? List.of() : Arrays.asList(rs.getString("terms").split("\\|"))))
                 .list();
     }
 
-    /** Every job entry in these fields - for "same field" related matches. term is empty (no phrase matched). */
-    public List<Hit> findJobsInFields(Collection<String> fields) {
-        return fields.isEmpty() ? List.of() : jdbc.sql("""
-                        SELECT e.candidate_id, e.id AS expertise_id, e.name, e.kind, e.field, e.source, e.score,
+    /** Every job entry with this role and/or domain (null = any). term is empty - no phrase was matched. */
+    public List<Hit> findJobs(String role, String domain) {
+        return jdbc.sql("""
+                        SELECT e.candidate_id, e.id AS expertise_id, e.name, e.kind, e.role, e.domain, e.source, e.score,
                                e.years::float8 AS years, '' AS term
-                        FROM expertise e WHERE e.kind = 'profession' AND e.field IN (:fields)""")
-                .param("fields", fields)
+                        FROM expertise e
+                        WHERE e.kind = 'profession' AND (CAST(:role AS TEXT) IS NULL OR e.role = :role)
+                          AND (CAST(:domain AS TEXT) IS NULL OR e.domain = :domain)""")
+                .param("role", role).param("domain", domain)
                 .query(Hit.class).list();
     }
 

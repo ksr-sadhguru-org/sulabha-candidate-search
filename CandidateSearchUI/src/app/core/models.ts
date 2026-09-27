@@ -83,9 +83,9 @@ export interface FilterCheck {
 }
 
 /** profile: every must-have in the search profile; related: some via an equivalent; text: some only in the
- *  resume text; partial: only some of the must-haves met; field: none met, but a job in the same field as the
- *  direct matches; filters: a filter-only search. */
-export type MatchType = 'profile' | 'related' | 'text' | 'partial' | 'field' | 'filters';
+ *  resume text; partial: only some of the must-haves met; domain: none met, but a job in the domain asked (another
+ *  role); filters: a filter-only search. */
+export type MatchType = 'profile' | 'related' | 'text' | 'partial' | 'domain' | 'filters';
 
 export interface CandidateMatch {
   candidate_id: string;
@@ -119,15 +119,16 @@ export interface SearchResponse {
 export interface ExpertiseView {
   name: string;
   kind: string | null;
-  /** The job's field (job entries only), e.g. "software & it". */
-  field: string | null;
+  /** Job entries only: the kind of work (fixed list, e.g. "teacher") and its subject (e.g. "music"). */
+  role: string | null;
+  domain: string | null;
   source: 'resume' | 'form';
   score: number;
   years: number | null;
   terms: string[];
 }
 
-export interface FieldCount {
+export interface DomainCount {
   name: string;
   candidates: number;
 }

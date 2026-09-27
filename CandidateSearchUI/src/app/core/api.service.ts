@@ -4,7 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   ApplicantDetails,
   CandidateDetail,
-  FieldCount,
+  DomainCount,
   ExtractedTextResponse,
   SearchResponse,
   TablesResponse,
@@ -44,8 +44,12 @@ export class ResumeApiService {
     return firstValueFrom(this.http.post<SearchResponse>(`${API_BASE}/query`, { query, offset, limit }));
   }
 
-  getFields(): Promise<FieldCount[]> {
-    return firstValueFrom(this.http.get<FieldCount[]>(`${API_BASE}/fields`));
+  getDomains(): Promise<DomainCount[]> {
+    return firstValueFrom(this.http.get<DomainCount[]>(`${API_BASE}/domains`));
+  }
+
+  getRoles(): Promise<string[]> {
+    return firstValueFrom(this.http.get<string[]>(`${API_BASE}/roles`));
   }
 
   getCandidateDetail(candidateId: string): Promise<CandidateDetail> {

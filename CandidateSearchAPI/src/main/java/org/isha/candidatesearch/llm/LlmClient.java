@@ -10,11 +10,11 @@ import java.util.List;
 public interface LlmClient {
 
     /** @param verifiedSkills the reviewed skill competencies field ("Java (2 years), ..."), or blank
-     *  @param fields the current field list, so job entries are labelled consistently */
-    Profile buildProfile(String resumeText, String verifiedSkills, List<String> fields);
+     *  @param domains the current domain list, so jobs are labelled consistently (roles are fixed: Roles.ALL) */
+    Profile buildProfile(String resumeText, String verifiedSkills, List<String> domains);
 
-    /** @param fields the current field list - the query's field is chosen from it */
-    ParsedQuery parseQuery(String query, List<String> fields);
+    /** @param domains the current domain list - the query's domain is chosen from it */
+    ParsedQuery parseQuery(String query, List<String> domains);
 
     /** Best-effort form suggestions from resume text alone - a human reviews them before saving. */
     ApplicantDetails suggestApplicantDetails(String resumeText);

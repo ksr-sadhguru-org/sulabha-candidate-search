@@ -143,9 +143,10 @@ for (const u of spec.uploads) {
       const [a, b] = u.lower_score.map(w => entries.find(e => nameMatch(e, w)));
       record(u.id, `${u.candidate}: ${u.lower_score[0]} scored below ${u.lower_score[1]}`, !!(a && b && a.score < b.score), show);
     }
-    for (const [entry, field] of Object.entries(u.job_fields ?? {})) {
+    for (const [entry, want] of Object.entries(u.job_labels ?? {})) {
       const e = d.expertise.find(x => x.kind === 'profession' && x.name.toLowerCase().includes(entry));
-      record(u.id, `${u.candidate}: "${entry}" job labelled "${field}"`, e?.field === field, e ? `${e.name} -> ${e.field}` : show);
+      record(u.id, `${u.candidate}: "${entry}" job labelled ${want.role ?? 'any role'} + ${want.domain}`,
+        (!want.role || e?.role === want.role) && e?.domain === want.domain, e ? `${e.name} -> ${e.role} + ${e.domain}` : show);
     }
     if (u.form?.skill_competencies_pattern) {
       const sc = d.applicant_details.skill_competencies ?? '';
@@ -183,15 +184,15 @@ for (const c of spec.queries) {
     const types = (r.results ?? []).map(m => m.match_type);
     if (types.includes('partial')) {
       const firstPartial = types.indexOf('partial');
-      record(c.id, `${tag} partial matches all follow the full matches`, types.slice(firstPartial).every(t => t === 'partial' || t === 'field'), brief);
+      record(c.id, `${tag} partial matches all follow the full matches`, types.slice(firstPartial).every(t => t === 'partial' || t === 'domain'), brief);
     }
-    if (types.includes('field')) {
-      const firstField = types.indexOf('field');
-      record(c.id, `${tag} same-field matches all come last`, types.slice(firstField).every(t => t === 'field'), brief);
+    if (types.includes('domain')) {
+      const firstDomain = types.indexOf('domain');
+      record(c.id, `${tag} same-domain matches all come last`, types.slice(firstDomain).every(t => t === 'domain'), brief);
     }
-    if (c.same_field) {
-      const bad = c.same_field.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'field'; });
-      record(c.id, `${tag} ${c.same_field.join(', ')} shown as same-field related matches`, !bad.length, `not same-field: ${bad} | ${brief}`);
+    if (c.same_domain) {
+      const bad = c.same_domain.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'domain'; });
+      record(c.id, `${tag} ${c.same_domain.join(', ')} shown as same-domain related matches`, !bad.length, `not same-domain: ${bad} | ${brief}`);
     }
     if (c.partial) {
       const bad = c.partial.filter(p => { const i = names.indexOf(p); return i < 0 || r.results[i].match_type !== 'partial'; });

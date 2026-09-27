@@ -5,10 +5,10 @@ import java.util.List;
 /** The LLM's search profile of one resume: one entry per area of expertise, plus total years of work. */
 public record Profile(Double totalYears, List<Entry> entries) {
 
-    /** kind: profession | skill | education | language. field: the job's field (professions only, e.g. "software & it").
-     *  terms: every phrase a search may use that this entry proves.
+    /** kind: profession | skill | education | language. role / domain: professions only - the kind of work
+     *  ("teacher") and its subject ("music"). terms: every phrase a search may use that this entry proves.
      *  score: education only (by level) - other entries are scored in code from years and lastUsedYear. */
-    public record Entry(String name, String kind, String field, Integer score, Double years, Integer lastUsedYear,
-                        List<String> terms) {
+    public record Entry(String name, String kind, String role, String domain, Integer score, Double years,
+                        Integer lastUsedYear, List<String> terms) {
     }
 }

@@ -13,22 +13,26 @@ import org.isha.candidatesearch.dto.SearchResponse;
 import org.isha.candidatesearch.service.NeedMatcher.Result;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * Search: parse the query (cached), find who meets the must-haves, check filters, rank.
- * When the query names skills, a generic job word in it ("developer") is context: it restricts the field and
- * ranks, but is not counted as a must-have. Others with a job in the same field as the direct matches follow last.
- * Ranking, strongest first: how many must-haves are met (all, some, none - same field only), how they were found
- * (profile > equivalent > resume text), then filters passed, then ranking extras met ("senior"), score, relevant years.
+ * Search: parse the query (cached) into the job asked (role + domain + wording), the skills asked, extras and
+ * filters; find who meets them; check filters; rank.
+ * The job: role + domain -> jobs with both are direct matches, other roles in the same domain follow as related,
+ * other domains are left out; role only -> that role in any domain; domain only -> that domain in any role.
+ * Skills count wherever they appear. Ranking, strongest first: skills met, then the job (direct > same domain >
+ * none), then how things were found (profile > equivalent > resume text), filters passed, extras, score, years.
  */
 @Service
 public class SearchService {
@@ -36,11 +40,14 @@ public class SearchService {
     static final String NOT_UNDERSTOOD = "We couldn't understand this search. Try describing the role, skills or location, e.g. 'Java developer in Coimbatore'.";
     static final String TOO_VAGUE = "Please add a role, skill or location to search for, e.g. 'Java developer in Coimbatore'.";
 
+    private static final int JOB_DIRECT = 2, JOB_SAME_DOMAIN = 1, JOB_NONE = 0;
+
     /** A result plus what it is ranked by. */
-    private record Ranked(CandidateMatch match, int mustMet, int quality, int niceMet, int score, double years) {
+    private record Ranked(CandidateMatch match, int skillsMet, int job, int quality, int niceMet, int score, double years) {
     }
 
-    private static final Comparator<Ranked> RANKING = Comparator.comparingInt(Ranked::mustMet).reversed()
+    private static final Comparator<Ranked> RANKING = Comparator.comparingInt(Ranked::skillsMet).reversed()
+            .thenComparing(Comparator.comparingInt(Ranked::job).reversed())
             .thenComparing(Comparator.comparingInt(Ranked::quality).reversed())
             .thenComparing(Comparator.comparingInt((Ranked r) -> r.match().filtersPassed()).reversed())
             .thenComparing(Comparator.comparingInt(Ranked::niceMet).reversed())
@@ -48,6 +55,10 @@ public class SearchService {
             .thenComparing(Comparator.comparingDouble(Ranked::years).reversed())
             .thenComparing(r -> Objects.requireNonNullElse(r.match().name(), "~"))
             .thenComparing(r -> r.match().candidateId());
+
+    /** Who meets the job directly, and who only has a job in the same domain (another role). */
+    private record JobMatches(Map<String, Result> direct, Map<String, Hit> sameDomain) {
+    }
 
     private final QueryParser parser;
     private final NeedMatcher matcher;
@@ -64,91 +75,107 @@ public class SearchService {
     /** The ranked page [offset, offset + limit) of everyone matching; total counts them all. */
     public SearchResponse search(String query, int offset, int limit) {
         ParsedQuery q = parser.parse(query);
-        // Only extras asked for ("senior") - treat them as the must-haves rather than listing everyone.
-        List<Need> asked = q.must().isEmpty() ? q.nice() : q.must();
-        boolean namesSkill = asked.stream().anyMatch(n -> !n.isGeneric());
-        List<Need> must = namesSkill ? asked.stream().filter(n -> !n.isGeneric()).toList() : asked;
-        List<Need> nice = Stream.concat(q.must().isEmpty() ? Stream.<Need>empty() : q.nice().stream(),
-                namesSkill ? asked.stream().filter(Need::isGeneric) : Stream.<Need>empty()).toList();
         if (!q.understood()) {
             return new SearchResponse(NOT_UNDERSTOOD, q, List.of(), 0);
         }
-        if (must.isEmpty() && !FilterEvaluator.hasAny(q.filters())) {
+        boolean asksJob = q.role() != null || q.domain() != null || q.job() != null;
+        // Only extras asked for ("senior") - treat them as the skills rather than listing everyone.
+        boolean onlyExtras = q.must().isEmpty() && !asksJob;
+        List<Need> skills = onlyExtras ? q.nice() : q.must();
+        List<Need> nice = onlyExtras ? List.of() : q.nice();
+        boolean filterOnly = skills.isEmpty() && !asksJob;
+        if (filterOnly && !FilterEvaluator.hasAny(q.filters())) {
             return new SearchResponse(TOO_VAGUE, q, List.of(), 0);
         }
 
-        // The field only restricts a query that names a specific skill; a generic job alone ("teacher") stays open.
-        String field = namesSkill ? q.field() : null;
-        List<Map<String, Result>> mustResults = must.stream().map(n -> matcher.matchMust(n, field)).toList();
+        List<Map<String, Result>> skillResults = skills.stream().map(matcher::matchSkill).toList();
+        JobMatches job = asksJob ? matchJob(q) : new JobMatches(Map.of(), Map.of());
         List<Map<String, Result>> niceResults = nice.stream().map(matcher::matchNice).toList();
-        // Everyone meeting at least one must-have (those meeting all rank first); a filter-only query considers
+        // Everyone meeting a skill or the job, or with a job in the same domain; a filter-only query considers
         // everyone and keeps those passing all filters.
-        Set<String> ids = must.isEmpty() ? null : mustResults.stream().flatMap(m -> m.keySet().stream())
-                .collect(java.util.stream.Collectors.toSet());
-        Map<String, Hit> sameField = must.isEmpty() ? Map.of() : sameFieldJobs(mustResults, q.field(), ids);
-        if (ids != null) {
-            ids.addAll(sameField.keySet());
-        }
+        Set<String> ids = filterOnly ? null : Stream.of(
+                        skillResults.stream().flatMap(m -> m.keySet().stream()),
+                        job.direct().keySet().stream(), job.sameDomain().keySet().stream())
+                .flatMap(s -> s).collect(Collectors.toSet());
 
+        int needs = skills.size() + (asksJob ? 1 : 0);
         List<CandidateMatch> results = candidates.findRows(ids).values().stream()
-                .map(row -> rank(row, q, must, mustResults, nice, niceResults, sameField.get(row.id())))
-                .filter(r -> !must.isEmpty() || r.match().filtersPassed() == r.match().filters().size())
+                .map(row -> rank(row, q, skills, skillResults, job, needs, nice, niceResults, filterOnly))
+                .filter(r -> !filterOnly || r.match().filtersPassed() == r.match().filters().size())
                 .sorted(RANKING)
                 .map(Ranked::match)
                 .toList();
         List<CandidateMatch> page = results.stream().skip(offset).limit(limit).toList();
-        return new SearchResponse(results.isEmpty() ? noMatchMessage(must, q) : null, q, page, results.size());
+        return new SearchResponse(results.isEmpty() ? noMatchMessage(skills, q, filterOnly) : null, q, page, results.size());
     }
 
     /**
-     * Candidates not matched yet whose job is in the same field as the direct matches: the most common field among
-     * the jobs that matched (a Java trainer doesn't make "java developer" a teaching search), or the query's field
-     * when no job matched. The best such job per candidate.
+     * The job asked: its wording matched against job entries (in the query's domain when there is one), plus every
+     * job with the asked role and/or domain; with both, other roles in that domain are related (same domain).
      */
-    private Map<String, Hit> sameFieldJobs(List<Map<String, Result>> mustResults, String queryField, Set<String> matched) {
-        Map<String, Long> jobFields = mustResults.stream().flatMap(m -> m.values().stream())
-                .filter(r -> r.quality() >= NeedMatcher.RELATED)
-                .flatMap(r -> r.hits().stream())
-                .filter(h -> "profession".equalsIgnoreCase(h.kind()) && h.field() != null)
-                .collect(java.util.stream.Collectors.groupingBy(Hit::field, java.util.stream.Collectors.counting()));
-        long most = jobFields.values().stream().mapToLong(Long::longValue).max().orElse(0);
-        Set<String> fields = most > 0
-                ? jobFields.entrySet().stream().filter(e -> e.getValue() == most).map(Map.Entry::getKey).collect(java.util.stream.Collectors.toSet())
-                : queryField == null ? Set.of() : Set.of(queryField);
-        return expertise.findJobsInFields(fields).stream()
-                .filter(h -> !matched.contains(h.candidateId()))
-                .collect(java.util.stream.Collectors.toMap(Hit::candidateId, h -> h, (a, b) -> a.score() >= b.score() ? a : b));
+    private JobMatches matchJob(ParsedQuery q) {
+        Map<String, Result> direct = new HashMap<>();
+        if (q.job() != null) {
+            direct.putAll(matcher.matchJob(q.job(), q.domain(), q.role() == null && q.domain() == null));
+        }
+        if (q.role() != null || q.domain() != null) {
+            String label = Stream.of(q.role(), q.domain()).filter(Objects::nonNull).collect(Collectors.joining(" + "));
+            expertise.findJobs(q.role(), q.domain()).stream()
+                    .map(h -> relabel(h, label))
+                    .collect(Collectors.groupingBy(Hit::candidateId))
+                    .forEach((id, hits) -> direct.merge(id, new Result(NeedMatcher.EXACT, hits, null),
+                            (a, b) -> a.quality() >= b.quality() ? a : b));
+        }
+        Map<String, Hit> sameDomain = q.role() == null || q.domain() == null ? Map.of()
+                : expertise.findJobs(null, q.domain()).stream()
+                        .filter(h -> !direct.containsKey(h.candidateId()))
+                        .collect(Collectors.toMap(Hit::candidateId, h -> h, (a, b) -> a.score() >= b.score() ? a : b));
+        return new JobMatches(direct, sameDomain);
     }
 
-    private Ranked rank(Row row, ParsedQuery q, List<Need> must, List<Map<String, Result>> mustResults,
-                        List<Need> nice, List<Map<String, Result>> niceResults, Hit sameFieldJob) {
-        List<Result> perNeed = mustResults.stream().map(m -> m.get(row.id())).toList(); // null: need not met
-        List<Result> met = perNeed.stream().filter(Objects::nonNull).toList();
-        List<FilterCheck> filters = Stream.concat(FilterEvaluator.evaluate(q.filters(), row).stream(),
-                IntStream.range(0, must.size()).mapToObj(i -> yearsCheck(must.get(i), perNeed.get(i))).filter(Objects::nonNull)).toList();
+    private static Hit relabel(Hit h, String via) {
+        return new Hit(h.candidateId(), h.expertiseId(), h.name(), h.kind(), h.role(), h.domain(), h.source(), h.score(), h.years(), via);
+    }
+
+    private Ranked rank(Row row, ParsedQuery q, List<Need> skills, List<Map<String, Result>> skillResults, JobMatches job,
+                        int needs, List<Need> nice, List<Map<String, Result>> niceResults, boolean filterOnly) {
+        List<Result> perSkill = skillResults.stream().map(m -> m.get(row.id())).toList(); // null: skill not met
+        Result jobResult = job.direct().get(row.id());
+        Hit sameDomainJob = job.sameDomain().get(row.id());
+        List<Result> met = new ArrayList<>(perSkill.stream().filter(Objects::nonNull).toList());
+        if (jobResult != null) {
+            met.add(jobResult);
+        }
+
+        List<FilterCheck> filters = Stream.of(
+                        FilterEvaluator.evaluate(q.filters(), row).stream(),
+                        IntStream.range(0, skills.size()).mapToObj(i -> yearsCheck(skills.get(i), perSkill.get(i))),
+                        Stream.of(q.job() == null ? null : yearsCheck(q.job(), jobResult)))
+                .flatMap(s -> s).filter(Objects::nonNull).toList();
         List<String> niceMet = IntStream.range(0, nice.size())
                 .filter(i -> niceResults.get(i).containsKey(row.id())).mapToObj(i -> nice.get(i).term()).toList();
-        int quality = met.stream().mapToInt(Result::quality).min().orElse(0);
-
-        String type = sameFieldJob != null && met.isEmpty() ? "field"
-                : !must.isEmpty() && met.size() < must.size() ? "partial" : matchType(must.isEmpty(), quality);
-        List<MatchedEntry> entries = sameFieldJob != null && met.isEmpty()
-                ? List.of(new MatchedEntry(sameFieldJob.name(), sameFieldJob.score(), sameFieldJob.years(), "same field: " + sameFieldJob.field(), true))
+        int quality = met.stream().mapToInt(Result::quality).min().orElse(NeedMatcher.SAME_DOMAIN);
+        String type = filterOnly ? "filters"
+                : met.isEmpty() ? "domain"
+                : met.size() < needs ? "partial" : matchType(quality);
+        List<MatchedEntry> entries = met.isEmpty() && sameDomainJob != null
+                ? List.of(new MatchedEntry(sameDomainJob.name(), sameDomainJob.score(), sameDomainJob.years(),
+                        "same domain: " + sameDomainJob.domain(), true))
                 : matchedEntries(met);
-        CandidateMatch match = new CandidateMatch(row.id(), row.name(), type, met.size(), must.size(),
+
+        CandidateMatch match = new CandidateMatch(row.id(), row.name(), type, met.size(), needs,
                 entries, met.stream().map(Result::textTerm).filter(Objects::nonNull).distinct().toList(), niceMet,
                 filters, (int) filters.stream().filter(f -> FilterEvaluator.PASS.equals(f.status())).count(),
                 row.experience(), row.totalYears(), row.qualification(), row.jobLocation(), row.languages(),
                 row.isMeditator(), row.stayInAshram());
-        if (sameFieldJob != null && met.isEmpty()) {
-            return new Ranked(match, 0, NeedMatcher.SAME_FIELD, niceMet.size(), sameFieldJob.score(),
-                    Objects.requireNonNullElse(sameFieldJob.years(), 0.0));
-        }
-        return new Ranked(match, met.size(), quality, niceMet.size(), met.stream().mapToInt(Result::bestScore).sum(),
-                met.stream().map(Result::years).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum());
+        int jobLevel = jobResult != null ? JOB_DIRECT : sameDomainJob != null ? JOB_SAME_DOMAIN : JOB_NONE;
+        int score = met.isEmpty() && sameDomainJob != null ? sameDomainJob.score() : met.stream().mapToInt(Result::bestScore).sum();
+        double years = met.isEmpty() && sameDomainJob != null ? Objects.requireNonNullElse(sameDomainJob.years(), 0.0)
+                : met.stream().map(Result::years).filter(Objects::nonNull).mapToDouble(Double::doubleValue).sum();
+        return new Ranked(match, (int) perSkill.stream().filter(Objects::nonNull).count(), jobLevel, quality, niceMet.size(), score, years);
     }
 
-    /** "Python experience: 9 years (wanted 8+)" - for a must-have asked with years ("python developer with 8+ years"). */
+    /** "Python experience: 9 years (wanted 8+)" - for a skill or job asked with years ("python developer with 8+ years"). */
     private static FilterCheck yearsCheck(Need need, Result result) {
         if (need.minYears() == null) {
             return null;
@@ -168,8 +195,7 @@ public class SearchService {
         return byName.values().stream().sorted(Comparator.comparingInt(MatchedEntry::score).reversed()).toList();
     }
 
-    private static String matchType(boolean filterOnly, int quality) {
-        if (filterOnly) return "filters";
+    private static String matchType(int quality) {
         return switch (quality) {
             case NeedMatcher.EXACT -> "profile";
             case NeedMatcher.RELATED -> "related";
@@ -178,15 +204,21 @@ public class SearchService {
     }
 
     /** "No candidates match 'astronaut' in Coimbatore." */
-    private static String noMatchMessage(List<Need> must, ParsedQuery q) {
-        if (must.isEmpty()) {
+    private static String noMatchMessage(List<Need> skills, ParsedQuery q, boolean filterOnly) {
+        if (filterOnly) {
             return "No candidates match these filters.";
         }
-        String terms = String.join("' and '", must.stream().map(Need::term).toList());
+        List<String> asked = new ArrayList<>();
+        if (q.job() != null) {
+            asked.add(q.job().term());
+        } else {
+            Stream.of(q.role(), q.domain()).filter(Objects::nonNull).forEach(asked::add);
+        }
+        skills.forEach(s -> asked.add(s.term()));
         String place = q.filters() == null || q.filters().location() == null ? null
                 : Stream.of(q.filters().location().city(), q.filters().location().state(), q.filters().location().country())
                 .filter(p -> p != null && !p.isBlank()).findFirst().orElse(null);
-        return "No candidates match '" + terms + "'" + (place == null ? "" : " in " + place) + ".";
+        return "No candidates match '" + String.join("' and '", asked) + "'" + (place == null ? "" : " in " + place) + ".";
     }
 
     private static String capitalize(String s) {

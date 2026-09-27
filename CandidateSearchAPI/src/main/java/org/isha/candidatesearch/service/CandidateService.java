@@ -2,7 +2,7 @@ package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.CandidateRepository;
 import org.isha.candidatesearch.db.ExpertiseRepository;
-import org.isha.candidatesearch.db.FieldRepository;
+import org.isha.candidatesearch.db.DomainRepository;
 import org.isha.candidatesearch.dto.ApplicantDetails;
 import org.isha.candidatesearch.dto.CandidateDetail;
 import org.isha.candidatesearch.dto.CandidateSummary;
@@ -39,15 +39,15 @@ public class CandidateService {
 
     private final CandidateRepository candidates;
     private final ExpertiseRepository expertise;
-    private final FieldRepository fields;
+    private final DomainRepository domains;
     private final LlmClient llm;
     private final TransactionTemplate tx;
 
-    public CandidateService(CandidateRepository candidates, ExpertiseRepository expertise, FieldRepository fields,
+    public CandidateService(CandidateRepository candidates, ExpertiseRepository expertise, DomainRepository domains,
                             LlmClient llm, TransactionTemplate tx) {
         this.candidates = candidates;
         this.expertise = expertise;
-        this.fields = fields;
+        this.domains = domains;
         this.llm = llm;
         this.tx = tx;
     }
@@ -57,7 +57,7 @@ public class CandidateService {
             ApplicantDetails form = ApplicantNormalization.normalize(Optional.ofNullable(request.applicantDetails()).orElse(EMPTY_FORM));
             Target target = resolveTarget(request.candidateId(), form);
             Profile profile = reusableProfile(target.id(), request.resumeText())
-                    .orElseGet(() -> llm.buildProfile(request.resumeText(), form.skillCompetencies(), fields.names()));
+                    .orElseGet(() -> llm.buildProfile(request.resumeText(), form.skillCompetencies(), domains.names()));
             if (profile == null) {
                 return new UploadResponse(false, "The AI service could not read this resume - nothing was saved.", request.candidateId(), false);
             }
@@ -66,8 +66,8 @@ public class CandidateService {
                     emailKey(form.emailFrom()), phoneKey(form.phone()), Locations.parse(form.jobLocation()));
             List<ExpertiseRepository.NewExpertise> rows = ProfileMapper.toExpertise(profile, form.skillCompetencies());
             tx.executeWithoutResult(status -> {
-                // A field the AI named that isn't on the list yet joins it, so later resumes and queries can use it.
-                rows.stream().map(ExpertiseRepository.NewExpertise::field).filter(Objects::nonNull).distinct().forEach(fields::add);
+                // A domain the AI named that isn't on the list yet joins it, so later resumes and queries can use it.
+                rows.stream().map(ExpertiseRepository.NewExpertise::domain).filter(Objects::nonNull).distinct().forEach(domains::add);
                 candidates.upsert(record, form);
                 expertise.replace(target.id(), rows);
             });

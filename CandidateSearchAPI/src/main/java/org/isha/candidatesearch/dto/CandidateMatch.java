@@ -5,7 +5,8 @@ import java.util.List;
 /**
  * One search result and why it is there.
  * matchType: "profile" (every must-have found in the search profile), "related" (some only via an equivalent
- * term), "text" (some only in the resume text), "partial" (only some must-haves met), "filters" (filter-only query).
+ * term), "text" (some only in the resume text), "partial" (only some must-haves met), "domain" (none met, but a job in
+ * the domain asked), "filters" (filter-only query).
  * mustMet / mustTotal: how many of the query's must-haves this candidate meets.
  */
 public record CandidateMatch(

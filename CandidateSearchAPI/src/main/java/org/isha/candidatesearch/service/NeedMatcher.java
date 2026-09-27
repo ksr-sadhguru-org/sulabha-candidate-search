@@ -1,7 +1,6 @@
 package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.ExpertiseRepository;
-import org.isha.candidatesearch.db.FieldRepository;
 import org.isha.candidatesearch.db.ExpertiseRepository.Hit;
 import org.isha.candidatesearch.db.TextSearchRepository;
 import org.isha.candidatesearch.dto.ParsedQuery.Need;
@@ -13,11 +12,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * Finds who has one need (a query term plus its equivalents), in order of strength:
+ * Finds who has one need by its words (a term plus its equivalents), in order of strength:
  * EXACT - a profile term is the query term or ends with it ("music teacher" for "teacher");
  * RELATED - the same, via one of the LLM's equivalents ("tutor") or only via an education entry;
  * TEXT - only the resume text contains it (full-text search).
@@ -25,14 +25,7 @@ import java.util.stream.Stream;
 @Component
 class NeedMatcher {
 
-    static final int EXACT = 3, RELATED = 2, TEXT = 1, SAME_FIELD = 0;
-
-    /** One-word job titles that mean different things in different fields ("developer": software or land). In a
-     *  query with a field they count only through a job in that field. Specific skills ("python") are never here. */
-    static final Set<String> GENERIC_JOB_WORDS = Set.of(
-            "developer", "engineer", "programmer", "teacher", "tutor", "trainer", "instructor", "consultant", "manager",
-            "analyst", "specialist", "technician", "officer", "executive", "assistant", "designer", "architect",
-            "operator", "supervisor", "coordinator", "lead", "expert", "professional", "worker");
+    static final int EXACT = 3, RELATED = 2, TEXT = 1, SAME_DOMAIN = 0;
 
     /** How one candidate meets one need. hits are empty for a TEXT match, textTerm is null otherwise. */
     record Result(int quality, List<Hit> hits, String textTerm) {
@@ -52,63 +45,39 @@ class NeedMatcher {
 
     private final ExpertiseRepository expertise;
     private final TextSearchRepository textSearch;
-    private final FieldRepository fields;
 
-    NeedMatcher(ExpertiseRepository expertise, TextSearchRepository textSearch, FieldRepository fields) {
+    NeedMatcher(ExpertiseRepository expertise, TextSearchRepository textSearch) {
         this.expertise = expertise;
         this.textSearch = textSearch;
-        this.fields = fields;
     }
 
-    /** Must-haves: profile terms equal to or ending with the need. A generic job word ("developer") in a query with a
-     *  field counts only through a job in that field - so a land developer never meets "developer" in a software search. */
-    Map<String, Result> matchMust(Need need, String queryField) {
-        Map<String, Result> results = match(need, false, queryField, need.isGeneric());
-        byFieldName(need).forEach((id, r) -> results.merge(id, r, (a, b) -> a.quality() >= b.quality() ? a : b));
-        return results;
+    /** A skill ("java") counts wherever it appears - any job, a skill entry, or the resume text. */
+    Map<String, Result> matchSkill(Need need) {
+        return match(need, false, h -> true, true);
     }
 
-    /**
-     * Field names are searchable: a term naming a field, or all fields it ends ("trades" -> "plumbing trade",
-     * "carpentry trade", ..., "other trades"), finds everyone whose job is in them, as a direct match.
-     */
-    private Map<String, Result> byFieldName(Need need) {
-        String term = Terms.normalize(need.term());
-        Set<String> named = fields.names().stream()
-                .filter(f -> containsWords(Terms.normalize(f), term))
-                .collect(java.util.stream.Collectors.toSet());
-        return expertise.findJobsInFields(named).stream()
-                .map(h -> new Hit(h.candidateId(), h.expertiseId(), h.name(), h.kind(), h.field(), h.source(), h.score(),
-                        h.years(), "field: " + h.field()))
-                .collect(java.util.stream.Collectors.groupingBy(Hit::candidateId))
-                .entrySet().stream()
-                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> new Result(EXACT, e.getValue(), null)));
+    /** The job as worded ("music instructor"): only job entries count, only in the query's domain when there is one;
+     *  resume text only when the query names neither a role nor a domain ("astronaut"). */
+    Map<String, Result> matchJob(Need need, String domain, boolean textFallback) {
+        return match(need, false, h -> "profession".equalsIgnoreCase(h.kind()) && (domain == null || domain.equals(h.domain())),
+                textFallback);
     }
 
     /** Ranking extras ("senior"): profile terms containing the need anywhere. */
     Map<String, Result> matchNice(Need need) {
-        return match(need, true, null, false);
+        return match(need, true, h -> true, true);
     }
 
-    /**
-     * @param queryField the query's field, or null when the query names no specific skill
-     * @param wholeNeedGeneric the need itself is a generic job word - then every phrase of it is field-bound;
-     *        otherwise only its one-word generic alternatives are. A field-bound phrase counts only through a job
-     *        entry in queryField, and is not searched in resume text (which has no field).
-     */
-    private Map<String, Result> match(Need need, boolean anywhere, String queryField, boolean wholeNeedGeneric) {
+    private Map<String, Result> match(Need need, boolean anywhere, Predicate<Hit> allowed, boolean textFallback) {
         String main = Terms.normalize(need.term());
         List<String> phrases = Stream.concat(Stream.of(main),
                         Optional.ofNullable(need.alternatives()).orElse(List.of()).stream().map(Terms::normalize))
                 .filter(p -> !p.isEmpty()).distinct().toList();
 
-        java.util.function.Predicate<String> fieldBound = p -> queryField != null && (wholeNeedGeneric || GENERIC_JOB_WORDS.contains(p));
-        java.util.function.BiPredicate<String, String> hitsPhrase = (term, p) -> anywhere ? containsWords(term, p) : Terms.matches(term, p);
         Map<String, Result> results = new HashMap<>();
         (anywhere ? expertise.findContaining(phrases) : expertise.findEndingWith(phrases)).stream()
-                // Kept when some phrase it matches is free, or it is a job in the query's field.
-                .filter(h -> inField(h, queryField) || phrases.stream().anyMatch(p -> hitsPhrase.test(h.term(), p) && !fieldBound.test(p)))
-                .collect(java.util.stream.Collectors.groupingBy(Hit::candidateId))
+                .filter(allowed)
+                .collect(Collectors.groupingBy(Hit::candidateId))
                 .forEach((id, hits) -> {
                     // A degree ("B.Tech Electrical Engineering") is not the profession itself - it counts as related.
                     List<Hit> exact = hits.stream()
@@ -117,15 +86,12 @@ class NeedMatcher {
                             .toList();
                     results.put(id, exact.isEmpty() ? new Result(RELATED, hits, null) : new Result(EXACT, exact, null));
                 });
-        phrases.stream()
-                .filter(p -> !fieldBound.test(p))
-                .filter(p -> p.matches("[a-z0-9 ]+")) // full-text search can't represent "c++", "c#", ".net"
-                .forEach(p -> textSearch.findContaining(p).forEach(id -> results.putIfAbsent(id, new Result(TEXT, List.of(), p))));
+        if (textFallback) {
+            phrases.stream()
+                    .filter(p -> p.matches("[a-z0-9 ]+")) // full-text search can't represent "c++", "c#", ".net"
+                    .forEach(p -> textSearch.findContaining(p).forEach(id -> results.putIfAbsent(id, new Result(TEXT, List.of(), p))));
+        }
         return results;
-    }
-
-    private static boolean inField(Hit h, String field) {
-        return field != null && "profession".equalsIgnoreCase(h.kind()) && field.equals(h.field());
     }
 
     private static boolean containsWords(String term, String phrase) {

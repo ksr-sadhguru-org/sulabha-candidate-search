@@ -5,7 +5,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
-import org.isha.candidatesearch.search.Fields;
+import org.isha.candidatesearch.search.Domains;
 
 import java.util.List;
 import java.util.stream.Stream;
@@ -17,8 +17,9 @@ import java.util.stream.Stream;
  * - expertise: one row per area of expertise, from the resume (LLM profile) or the form (skill competencies).
  * - expertise_terms: every normalized phrase that finds an expertise row. Nothing is shared between candidates.
  * - query_cache: each query's parsed form, so the same query always searches the same way.
- * - fields: the growing list of fields (software & it, music, ...) job entries are labelled with. It starts from
- *   STARTER_FIELDS and grows as resumes need new fields; Clear All Data resets it to the starter list.
+ * - domains: the growing list of domains - the subject side of a job (music, software & it, plumbing, ...). Each
+ *   job entry has a domain and a role (Roles.ALL, fixed). It starts from STARTER_DOMAINS and grows as resumes need
+ *   new ones; Clear All Data resets it to the starter list.
  */
 @Service
 public class SchemaService {
@@ -28,15 +29,14 @@ public class SchemaService {
     /** Children first, so DROP works without CASCADE ordering surprises. */
     public static final List<String> TABLES = List.of("expertise_terms", "expertise", "candidates", "query_cache");
 
-    /** Seed for the fields table; the AI adds a new field only when none of the existing ones fits. There is no
-     *  single broad "trades" field: each trade has its own ("plumbing trade", ...), and "other trades" catches the rest. */
-    public static final List<String> STARTER_FIELDS = Stream.of(
-            "software & it", "electrical", "mechanical", "civil & construction", "music", "performing arts",
-            "teaching & education", "languages & translation", "accounting & finance", "healthcare", "hospitality & food",
-            "design & media", "management", "yoga & wellness", "transport & logistics",
-            "electrical trade", "plumbing trade", "carpentry trade", "masonry trade", "painting trade", "welding trade",
-            "hvac & refrigeration trade", "gardening trade", "housekeeping trade", "tailoring trade", "security trade",
-            "farming trade", "other trades").map(Fields::normalize).toList();
+    /** Seed for the domains table; the AI adds a new domain only when none of the existing ones fits. */
+    public static final List<String> STARTER_DOMAINS = Stream.of(
+            "software & it", "electrical", "mechanical", "civil & construction", "property & real estate", "music",
+            "dance & theatre", "visual arts & design", "languages & literature", "mathematics & science",
+            "early childhood", "accounting & finance", "management & administration", "healthcare", "yoga & wellness",
+            "food & hospitality", "plumbing", "carpentry & woodwork", "masonry & tiling", "painting",
+            "welding & fabrication", "hvac", "housekeeping", "security", "transport & logistics", "agriculture & farming")
+            .map(Domains::normalize).toList();
 
     private final JdbcClient jdbcClient;
 
@@ -73,10 +73,14 @@ public class SchemaService {
                     name VARCHAR(255) NOT NULL, kind VARCHAR(20), source VARCHAR(10) NOT NULL, score INT NOT NULL, years REAL
                 )""").update();
         jdbcClient.sql("CREATE INDEX IF NOT EXISTS idx_expertise_candidate ON expertise(candidate_id)").update();
-        jdbcClient.sql("ALTER TABLE expertise ADD COLUMN IF NOT EXISTS field VARCHAR(100)").update();
+        // Role (fixed list) and domain (growing list) on job entries; the earlier single "field" is replaced by them.
+        jdbcClient.sql("ALTER TABLE expertise ADD COLUMN IF NOT EXISTS role VARCHAR(40)").update();
+        jdbcClient.sql("ALTER TABLE expertise ADD COLUMN IF NOT EXISTS domain VARCHAR(100)").update();
+        jdbcClient.sql("ALTER TABLE expertise DROP COLUMN IF EXISTS field").update();
+        jdbcClient.sql("DROP TABLE IF EXISTS fields").update();
 
-        jdbcClient.sql("CREATE TABLE IF NOT EXISTS fields (name VARCHAR(100) PRIMARY KEY, created_date TIMESTAMP DEFAULT NOW())").update();
-        STARTER_FIELDS.forEach(name -> jdbcClient.sql("INSERT INTO fields (name) VALUES (:name) ON CONFLICT DO NOTHING")
+        jdbcClient.sql("CREATE TABLE IF NOT EXISTS domains (name VARCHAR(100) PRIMARY KEY, created_date TIMESTAMP DEFAULT NOW())").update();
+        STARTER_DOMAINS.forEach(name -> jdbcClient.sql("INSERT INTO domains (name) VALUES (:name) ON CONFLICT DO NOTHING")
                 .param("name", name).update());
 
         jdbcClient.sql("""
@@ -98,7 +102,7 @@ public class SchemaService {
 
     public List<String> dropAllTables() {
         TABLES.forEach(t -> jdbcClient.sql("DROP TABLE IF EXISTS " + t + " CASCADE").update());
-        jdbcClient.sql("DROP TABLE IF EXISTS fields").update();
+        jdbcClient.sql("DROP TABLE IF EXISTS domains").update();
         log.warn("Dropped tables: {}", TABLES);
         return TABLES;
     }
@@ -106,8 +110,8 @@ public class SchemaService {
     /** Empties every table, keeping the schema. The query cache goes too, so prompt changes take effect. */
     public List<String> clearAllData() {
         jdbcClient.sql("TRUNCATE TABLE " + String.join(", ", TABLES)).update();
-        // Learned fields came from the data just cleared - back to the starter list.
-        jdbcClient.sql("DELETE FROM fields WHERE name NOT IN (:starter)").param("starter", STARTER_FIELDS).update();
+        // Learned domains came from the data just cleared - back to the starter list.
+        jdbcClient.sql("DELETE FROM domains WHERE name NOT IN (:starter)").param("starter", STARTER_DOMAINS).update();
         log.warn("Cleared all data: {}", TABLES);
         return TABLES;
     }

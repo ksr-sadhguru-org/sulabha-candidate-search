@@ -23,12 +23,13 @@ class SearchHelpersTest {
     }
 
     @Test
-    void normalizesFieldNames() {
-        assertEquals("software & it", Fields.normalize("Software and IT"));
-        assertEquals("trades-plumbing", Fields.normalize("Trades - Plumbing"));
-        assertEquals("trades-carpentry & woodwork", Fields.normalize("trades-Carpentry and Woodwork"));
-        assertEquals("other trades", Fields.normalize(" Other  Trades "));
-        assertNull(Fields.normalize("  "));
+    void normalizesDomainsAndRoles() {
+        assertEquals("software & it", Domains.normalize("Software and IT"));
+        assertEquals("carpentry & woodwork", Domains.normalize(" Carpentry  and Woodwork "));
+        assertNull(Domains.normalize("  "));
+        assertEquals("engineer / developer", Roles.normalize("Engineer/Developer"));
+        assertEquals("teacher", Roles.normalize("Teacher"));
+        assertNull(Roles.normalize("astronaut"));
     }
 
     @Test

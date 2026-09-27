@@ -4,6 +4,7 @@ import org.isha.candidatesearch.config.CandidateSearchProperties;
 import org.isha.candidatesearch.dto.ApplicantDetails;
 import org.isha.candidatesearch.dto.ParsedQuery;
 import org.isha.candidatesearch.dto.Profile;
+import org.isha.candidatesearch.search.Roles;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -23,6 +24,8 @@ public class AzureLlmClient implements LlmClient {
 
     private static final Logger log = LoggerFactory.getLogger(AzureLlmClient.class);
 
+    private static final String ROLES = String.join(", ", Roles.ALL);
+
     private final RestClient openAiRestClient;
     private final CandidateSearchProperties properties;
     private final ObjectMapper jsonMapper = LlmJson.MAPPER;
@@ -33,14 +36,16 @@ public class AzureLlmClient implements LlmClient {
     }
 
     @Override
-    public Profile buildProfile(String resumeText, String verifiedSkills, List<String> fields) {
+    public Profile buildProfile(String resumeText, String verifiedSkills, List<String> domains) {
         String skills = verifiedSkills == null || verifiedSkills.isBlank() ? "none" : verifiedSkills;
-        return complete(properties.openai().model(), Prompts.PROFILE.formatted(String.join(", ", fields), skills, resumeText), Profile.class);
+        return complete(properties.openai().model(),
+                Prompts.PROFILE.formatted(ROLES, String.join(", ", domains), skills, resumeText), Profile.class);
     }
 
     @Override
-    public ParsedQuery parseQuery(String query, List<String> fields) {
-        return complete(properties.openai().queryModel(), Prompts.QUERY.formatted(String.join(", ", fields), query), ParsedQuery.class);
+    public ParsedQuery parseQuery(String query, List<String> domains) {
+        return complete(properties.openai().queryModel(),
+                Prompts.QUERY.formatted(ROLES, String.join(", ", domains), query), ParsedQuery.class);
     }
 
     @Override

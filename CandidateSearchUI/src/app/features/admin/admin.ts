@@ -1,7 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ResumeApiService } from '../../core/api.service';
-import { FieldCount } from '../../core/models';
+import { DomainCount } from '../../core/models';
 
 const CONFIRM_PHRASE = 'DELETE ALL DATA';
 
@@ -20,18 +20,21 @@ export class Admin {
   readonly clearingCache = signal(false);
   readonly message = signal<string | null>(null);
   readonly error = signal<string | null>(null);
-  /** The growing field list job entries are labelled with - duplicates of the same field stand out here. */
-  readonly fields = signal<FieldCount[]>([]);
+  /** Jobs are labelled with a role (fixed list) and a domain (grows) - duplicate domains stand out here. */
+  readonly domains = signal<DomainCount[]>([]);
+  readonly roles = signal<string[]>([]);
 
   constructor(private readonly api: ResumeApiService) {
-    void this.loadFields();
+    void this.loadLabels();
   }
 
-  async loadFields(): Promise<void> {
+  async loadLabels(): Promise<void> {
     try {
-      this.fields.set(await this.api.getFields());
+      const [domains, roles] = await Promise.all([this.api.getDomains(), this.api.getRoles()]);
+      this.domains.set(domains);
+      this.roles.set(roles);
     } catch (err) {
-      console.error('Loading fields failed', err);
+      console.error('Loading roles and domains failed', err);
     }
   }
 
