@@ -5,7 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import org.springframework.stereotype.Service;
 
+import org.isha.candidatesearch.search.Fields;
+
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * Schema:
@@ -14,8 +17,8 @@ import java.util.List;
  * - expertise: one row per area of expertise, from the resume (LLM profile) or the form (skill competencies).
  * - expertise_terms: every normalized phrase that finds an expertise row. Nothing is shared between candidates.
  * - query_cache: each query's parsed form, so the same query always searches the same way.
- * - fields: the growing list of fields (software & it, music, ...) job entries are labelled with. It is vocabulary,
- *   not candidate data, so Clear All Data keeps it; it starts from STARTER_FIELDS.
+ * - fields: the growing list of fields (software & it, music, ...) job entries are labelled with. It starts from
+ *   STARTER_FIELDS and grows as resumes need new fields; Clear All Data resets it to the starter list.
  */
 @Service
 public class SchemaService {
@@ -25,11 +28,15 @@ public class SchemaService {
     /** Children first, so DROP works without CASCADE ordering surprises. */
     public static final List<String> TABLES = List.of("expertise_terms", "expertise", "candidates", "query_cache");
 
-    /** Seed for the fields table; the AI adds a new field only when none of the existing ones fits. */
-    public static final List<String> STARTER_FIELDS = List.of(
+    /** Seed for the fields table; the AI adds a new field only when none of the existing ones fits. There is no
+     *  single broad "trades" field: each trade has its own ("plumbing trade", ...), and "other trades" catches the rest. */
+    public static final List<String> STARTER_FIELDS = Stream.of(
             "software & it", "electrical", "mechanical", "civil & construction", "music", "performing arts",
             "teaching & education", "languages & translation", "accounting & finance", "healthcare", "hospitality & food",
-            "trades", "design & media", "management", "yoga & wellness", "transport & logistics");
+            "design & media", "management", "yoga & wellness", "transport & logistics",
+            "electrical trade", "plumbing trade", "carpentry trade", "masonry trade", "painting trade", "welding trade",
+            "hvac & refrigeration trade", "gardening trade", "housekeeping trade", "tailoring trade", "security trade",
+            "farming trade", "other trades").map(Fields::normalize).toList();
 
     private final JdbcClient jdbcClient;
 
@@ -99,6 +106,8 @@ public class SchemaService {
     /** Empties every table, keeping the schema. The query cache goes too, so prompt changes take effect. */
     public List<String> clearAllData() {
         jdbcClient.sql("TRUNCATE TABLE " + String.join(", ", TABLES)).update();
+        // Learned fields came from the data just cleared - back to the starter list.
+        jdbcClient.sql("DELETE FROM fields WHERE name NOT IN (:starter)").param("starter", STARTER_FIELDS).update();
         log.warn("Cleared all data: {}", TABLES);
         return TABLES;
     }

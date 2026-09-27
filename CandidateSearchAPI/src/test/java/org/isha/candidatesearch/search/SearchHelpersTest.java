@@ -23,6 +23,15 @@ class SearchHelpersTest {
     }
 
     @Test
+    void normalizesFieldNames() {
+        assertEquals("software & it", Fields.normalize("Software and IT"));
+        assertEquals("trades-plumbing", Fields.normalize("Trades - Plumbing"));
+        assertEquals("trades-carpentry & woodwork", Fields.normalize("trades-Carpentry and Woodwork"));
+        assertEquals("other trades", Fields.normalize(" Other  Trades "));
+        assertNull(Fields.normalize("  "));
+    }
+
+    @Test
     void matchesWholeTrailingWordsOnly() {
         assertTrue(Terms.matches("music teacher", "teacher"));
         assertTrue(Terms.matches("teacher", "teacher"));

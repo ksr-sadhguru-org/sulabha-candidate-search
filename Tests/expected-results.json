@@ -56,7 +56,11 @@
     { "id": "B2", "file": "Vikram Patil - Java Developer (Updated).docx", "expect": "updated_existing", "candidate_count": { "Vikram Patil": 1 }, "expertise": [{ "name": "kotlin*" }] },
     { "id": "B3", "candidate_count": { "Ravi Kumar": 2 } },
     { "id": "A14", "candidate": "Prakash Menon", "job_fields": { "land developer": "civil & construction" } },
-    { "id": "A14", "candidate": "Rohan Kulkarni", "job_fields": { "java developer": "software & it" } }
+    { "id": "A14", "candidate": "Rohan Kulkarni", "job_fields": { "java developer": "software & it" } },
+    { "id": "A14", "candidate": "Ramesh Kumar", "job_fields": { "plumber": "plumbing trade" } },
+    { "id": "A14", "candidate": "Balaji Natarajan", "job_fields": { "carpenter": "carpentry trade" } },
+    { "id": "A14", "candidate": "Murugan Selvam", "job_fields": { "electrician": "electrical trade" } },
+    { "id": "A14", "candidate": "Senthil Kumar", "job_fields": { "electrical engineer": "electrical" } }
   ],
 
   "queries": [
@@ -68,9 +72,9 @@
     { "id": "C5", "q": "java and python developer", "first": ["Deepa Nair"], "include": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"], "partial": ["Anil Sharma", "Rohan Kulkarni", "Sneha Joshi"], "same_field": ["Farhan Ali"], "exclude": ["Prakash Menon"] },
     { "id": "C6", "q": "senior carpenter", "first": ["Balaji Natarajan"], "include": ["Joseph Mathew"], "order": [["Balaji Natarajan", "Joseph Mathew"]], "not_skill_match": ["Rohan Kulkarni", "Anil Sharma", "Farhan Ali"] },
     { "id": "C7", "q": "spring boot", "include": ["Rohan Kulkarni", "Sneha Joshi", "Deepa Nair"] },
-    { "id": "C8", "q": "plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
+    { "id": "C8", "q": "plumber", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"], "exclude": ["Balaji Natarajan", "Joseph Mathew"] },
     { "id": "C8", "q": "plumbing", "first": ["Ramesh Kumar"], "include": ["Sanjay Verma"] },
-    { "id": "C8", "q": "carpentry", "include": ["Balaji Natarajan", "Joseph Mathew"] },
+    { "id": "C8", "q": "carpentry", "include": ["Balaji Natarajan", "Joseph Mathew"], "exclude": ["Ramesh Kumar"] },
     { "id": "C9", "q": "electrcian", "first": ["Murugan Selvam"], "related_below": ["Senthil Kumar", "Divya Raghavan"] },
     { "id": "C9", "q": "sanskirt teacher", "first": ["Saraswati Iyer"] },
     { "id": "C10", "q": "senior developer", "not_skill_match": ["Revathi Krishnan", "Balaji Natarajan", "Ramesh Kumar"] },
@@ -82,6 +86,8 @@
     { "id": "C15", "q": "astronaut in Coimbatore", "count_max": 0, "message": "no candidates match" },
     { "id": "C16", "q": "software engineer", "include": ["Rohan Kulkarni", "Deepa Nair", "Anil Sharma", "Farhan Ali", "Kiran Rao", "Vikram Patil", "Sneha Joshi", "Priya Menon"], "related_below": ["Priya Menon"], "exclude": ["Senthil Kumar", "Divya Raghavan", "Murugan Selvam", "Prakash Menon"] },
     { "id": "C16", "q": "software developer", "include": ["Rohan Kulkarni", "Deepa Nair", "Anil Sharma", "Farhan Ali", "Kiran Rao", "Vikram Patil", "Sneha Joshi"], "related_below": ["Priya Menon", "Srinivasan Raghavan"], "exclude": ["Senthil Kumar", "Divya Raghavan", "Murugan Selvam", "Prakash Menon"] },
+    { "id": "C20", "q": "trades", "include": ["Ramesh Kumar", "Balaji Natarajan", "Joseph Mathew", "Murugan Selvam"], "exclude": ["Senthil Kumar", "Divya Raghavan", "Prakash Menon"] },
+    { "id": "C20", "q": "music", "include": ["Meenakshi Sundaram", "Arvind Mishra"] },
     { "id": "C18", "q": "music instructor", "include": ["Meenakshi Sundaram", "Arvind Mishra"], "exclude": ["Geetha Ramachandran", "Saraswati Iyer", "Revathi Krishnan"] },
     { "id": "C19", "q": "Java developer in india with 8+ years experience", "first": ["Rohan Kulkarni"], "same_field": ["Anil Sharma", "Kiran Rao", "Farhan Ali"], "exclude": ["Prakash Menon"] },
     { "id": "C17", "q": "python developer", "first": ["Anil Sharma", "Deepa Nair", "Kiran Rao"], "include": ["Kavya Subramanian"], "related_below": ["Kavya Subramanian"] },

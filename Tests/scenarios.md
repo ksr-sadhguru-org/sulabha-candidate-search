@@ -69,6 +69,7 @@ Expected results, checkable by a script, are in `expected-results.json`.
 | C17 | Core skill of a job               | "python developer" vs "candidate with python skills" | Both find everyone who knows Python; for "python developer" the developers come first and Kavya (accountant who uses Python) follows as a related match                                |
 | C18 | Same job, other wording | "music instructor" | The music teacher, and the tabla player as a same-field related match; never the maths tutor or other teachers |
 | C19 | Same field, related | "Java developer in india with 8+ years experience" | Java developers first; other software people (Python, .NET) follow as same-field related matches, last |
+| C20 | Field names are searchable | "trades", "music" | Everyone whose job is in the named field(s): "trades" finds plumbers, carpenters and electricians (not electrical engineers or the land developer) |
 | C16 | Broad job category                | "software engineer", "software developer"            | Every programming role (Java, Python, .NET, full stack, etc.); adjacent QA / former programmers as related, ranked below; never electrical engineers, electricians or a land developer |
 
 ## D. Ranking

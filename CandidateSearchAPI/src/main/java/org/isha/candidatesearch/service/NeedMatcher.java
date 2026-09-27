@@ -1,6 +1,7 @@
 package org.isha.candidatesearch.service;
 
 import org.isha.candidatesearch.db.ExpertiseRepository;
+import org.isha.candidatesearch.db.FieldRepository;
 import org.isha.candidatesearch.db.ExpertiseRepository.Hit;
 import org.isha.candidatesearch.db.TextSearchRepository;
 import org.isha.candidatesearch.dto.ParsedQuery.Need;
@@ -51,16 +52,37 @@ class NeedMatcher {
 
     private final ExpertiseRepository expertise;
     private final TextSearchRepository textSearch;
+    private final FieldRepository fields;
 
-    NeedMatcher(ExpertiseRepository expertise, TextSearchRepository textSearch) {
+    NeedMatcher(ExpertiseRepository expertise, TextSearchRepository textSearch, FieldRepository fields) {
         this.expertise = expertise;
         this.textSearch = textSearch;
+        this.fields = fields;
     }
 
     /** Must-haves: profile terms equal to or ending with the need. A generic job word ("developer") in a query with a
      *  field counts only through a job in that field - so a land developer never meets "developer" in a software search. */
     Map<String, Result> matchMust(Need need, String queryField) {
-        return match(need, false, queryField, need.isGeneric());
+        Map<String, Result> results = match(need, false, queryField, need.isGeneric());
+        byFieldName(need).forEach((id, r) -> results.merge(id, r, (a, b) -> a.quality() >= b.quality() ? a : b));
+        return results;
+    }
+
+    /**
+     * Field names are searchable: a term naming a field, or all fields it ends ("trades" -> "plumbing trade",
+     * "carpentry trade", ..., "other trades"), finds everyone whose job is in them, as a direct match.
+     */
+    private Map<String, Result> byFieldName(Need need) {
+        String term = Terms.normalize(need.term());
+        Set<String> named = fields.names().stream()
+                .filter(f -> containsWords(Terms.normalize(f), term))
+                .collect(java.util.stream.Collectors.toSet());
+        return expertise.findJobsInFields(named).stream()
+                .map(h -> new Hit(h.candidateId(), h.expertiseId(), h.name(), h.kind(), h.field(), h.source(), h.score(),
+                        h.years(), "field: " + h.field()))
+                .collect(java.util.stream.Collectors.groupingBy(Hit::candidateId))
+                .entrySet().stream()
+                .collect(java.util.stream.Collectors.toMap(Map.Entry::getKey, e -> new Result(EXACT, e.getValue(), null)));
     }
 
     /** Ranking extras ("senior"): profile terms containing the need anywhere. */

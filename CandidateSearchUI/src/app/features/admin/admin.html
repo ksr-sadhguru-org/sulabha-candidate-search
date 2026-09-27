@@ -19,7 +19,7 @@
 
 <div class="card">
   <h2>Fields</h2>
-  <p class="hint">Job entries are labelled with one of these. The list grows when a resume brings a field that isn't here yet.</p>
+  <p class="hint">Job entries are labelled with one of these. The list grows when a resume brings a field that isn't here yet; Clear All Data resets it to the starter list.</p>
   <ul class="fields">
     @for (field of fields(); track field.name) {
       <li><span>{{ field.name }}</span><span class="hint">{{ field.candidates }} candidate{{ field.candidates === 1 ? '' : 's' }}</span></li>
