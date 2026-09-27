@@ -24,6 +24,8 @@ __screenshots__/
 # --- Secrets (API keys etc.) ---
 .env
 .env.*
+# The template with placeholder values is committed so new users can copy it.
+!.env.example
 
 # --- IDEs / editors ---
 .idea/

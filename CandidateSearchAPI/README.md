@@ -4,8 +4,8 @@ Spring Boot backend for Sulabha: API on **8000**, Postgres on **5432**, database
 
 ## Run
 
-Put the LLM settings in `.env` (gitignored): `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_MODEL`,
-`OPENAI_QUERY_MODEL` - or `MOCK_LLM=true`.
+Copy `.env.example` to `.env` (gitignored) and fill in the AI settings - the file explains OpenAI and Azure OpenAI.
+Step-by-step setup for new users: [Getting started](../README.md#getting-started).
 
 ```powershell
 docker compose up -d                                  # start
