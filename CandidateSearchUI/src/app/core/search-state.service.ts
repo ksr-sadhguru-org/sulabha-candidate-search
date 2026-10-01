@@ -35,6 +35,7 @@ export class SearchStateService {
     }
     this.loading.set(true);
     this.errorMessage.set(null);
+    this.expandedId.set(null);
     try {
       const response = await this.api.search(query);
       this.searchedQuery = query;

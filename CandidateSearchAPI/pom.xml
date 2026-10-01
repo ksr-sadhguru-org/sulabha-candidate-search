@@ -18,7 +18,7 @@
     <description>Sulabha - AI-powered candidate search with per-candidate search profiles</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
     </properties>
 
     <dependencies>
