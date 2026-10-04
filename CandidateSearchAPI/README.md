@@ -47,5 +47,9 @@ Unclear, vague and no-match queries return a `message` instead of results.
 ## Endpoints
 
 `POST /extract_resume_text` · `POST /suggest_applicant_details` · `POST /upload_resume` ·
-`POST /upload_resumes_bulk` · `GET /candidates` · `GET /candidates/{id}` · `POST /query` ·
-`DELETE /clear_all_data` · `DELETE /drop_all_tables` · `POST /create_all_tables`
+`POST /upload_resumes_bulk` · `GET /candidates` · `GET /candidates/{id}` · `DELETE /candidates/{id}` ·
+`POST /query` · `GET /domains` · `GET /roles` · `DELETE /query_cache` · `DELETE /clear_all_data` ·
+`DELETE /drop_all_tables` · `POST /create_all_tables`
+
+A Postman collection with every endpoint and sample bodies is in [postman/](postman/CandidateSearch.postman_collection.json):
+import it, and set Postman's working directory to the repository folder for the file uploads.

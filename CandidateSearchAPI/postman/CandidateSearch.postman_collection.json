@@ -1,0 +1,176 @@
+{
+  "info": {
+    "name": "Sulabha Candidate Search API",
+    "description": "CandidateSearchAPI endpoints. JSON is snake_case. Requests chain through collection variables: Extract resume text -> Suggest / Save; List candidates or Search -> candidate detail / delete.\n\nFile uploads point at the sample resumes under Tests/ - set Postman's working directory (Settings > General) to the repository folder.\n\nThe Admin folder deletes data.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8000" },
+    { "key": "resumeFile", "value": "Tests/Candidate Resumes for Tests/Anil Sharma - Senior Python Developer.pdf" },
+    { "key": "resumeName", "value": "" },
+    { "key": "resumeTextJson", "value": "\"\"" },
+    { "key": "candidateId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "request": { "method": "GET", "url": "{{baseUrl}}/actuator/health" },
+      "event": [{ "listen": "test", "script": { "exec": [
+        "pm.test('UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+      ] } }]
+    },
+    {
+      "name": "Resumes",
+      "item": [
+        {
+          "name": "Extract resume text",
+          "request": {
+            "method": "POST",
+            "description": "Text of a PDF/DOC/DOCX for review; duplicate_of is set when the same resume text is already on file. 400 when no text can be read (scanned image).",
+            "url": "{{baseUrl}}/extract_resume_text",
+            "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "{{resumeFile}}" }] }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));",
+            "const body = pm.response.json();",
+            "pm.collectionVariables.set('resumeName', body.resume_name);",
+            "pm.collectionVariables.set('resumeTextJson', JSON.stringify(body.extracted_text));"
+          ] } }]
+        },
+        {
+          "name": "Suggest applicant details",
+          "request": {
+            "method": "POST",
+            "description": "AI-suggested form values from the resume text (run Extract resume text first). 502 when the AI service gives none.",
+            "url": "{{baseUrl}}/suggest_applicant_details",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"resume_text\": {{resumeTextJson}}\n}" }
+          }
+        },
+        {
+          "name": "Save resume",
+          "request": {
+            "method": "POST",
+            "description": "Saves one candidate (run Extract resume text first). candidate_id is chosen by the client; the same email or phone as an existing candidate updates that candidate. Isha-specific fields are entered by hand only.",
+            "url": "{{baseUrl}}/upload_resume",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"candidate_id\": \"{{$guid}}\",\n  \"resume_name\": \"{{resumeName}}\",\n  \"resume_text\": {{resumeTextJson}},\n  \"applicant_details\": {\n    \"name\": \"Anil Sharma\",\n    \"email_from\": null,\n    \"phone\": null,\n    \"dob\": null,\n    \"gender\": null,\n    \"marital_status\": null,\n    \"address\": null,\n    \"qualification\": null,\n    \"experience\": null,\n    \"skill_competencies\": null,\n    \"other_interests\": null,\n    \"reason_for_change\": null,\n    \"notice_period\": null,\n    \"salary_expected\": null,\n    \"stay_in_ashram\": \"Yes\",\n    \"any_kind_job\": null,\n    \"duration_with_isha\": null,\n    \"done_isha_program\": null,\n    \"linkedin_profile\": null,\n    \"job_id\": null,\n    \"nationality\": null,\n    \"job_location\": \"Coimbatore, Tamil Nadu, India\",\n    \"languages\": null,\n    \"applicant_programs\": null,\n    \"is_meditator\": \"Yes\"\n  }\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));",
+            "const id = pm.response.json().candidate_id;",
+            "if (id) pm.collectionVariables.set('candidateId', id);"
+          ] } }]
+        },
+        {
+          "name": "Bulk upload resumes",
+          "request": {
+            "method": "POST",
+            "description": "Extracts, AI-fills and saves each file; returns one result per file (saved, duplicate, updated or an error message). Add more 'files' rows for more resumes.",
+            "url": "{{baseUrl}}/upload_resumes_bulk",
+            "body": { "mode": "formdata", "formdata": [
+              { "key": "files", "type": "file", "src": "Tests/Candidate Resumes for Tests/Ramesh Kumar - Plumber.pdf" },
+              { "key": "files", "type": "file", "src": "Tests/Candidate Resumes for Tests/Murugan Selvam - Electrician.docx" }
+            ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Candidates",
+      "item": [
+        {
+          "name": "List candidates",
+          "request": { "method": "GET", "url": "{{baseUrl}}/candidates" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));",
+            "const first = pm.response.json()[0];",
+            "if (first) pm.collectionVariables.set('candidateId', first.candidate_id);"
+          ] } }]
+        },
+        {
+          "name": "Get candidate",
+          "request": {
+            "method": "GET",
+            "description": "Full record: applicant details, resume text and search profile. Uses candidateId from List candidates, Search or Save resume.",
+            "url": "{{baseUrl}}/candidates/{{candidateId}}"
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "Delete candidate",
+          "request": { "method": "DELETE", "description": "Deletes candidateId permanently.", "url": "{{baseUrl}}/candidates/{{candidateId}}" }
+        }
+      ]
+    },
+    {
+      "name": "Search",
+      "item": [
+        {
+          "name": "Search candidates",
+          "request": {
+            "method": "POST",
+            "description": "Plain-language search, ranked and explained. offset / limit (1-100) page through the results; defaults: first 20.",
+            "url": "{{baseUrl}}/query",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"query\": \"python developer with 8+ years experience in Coimbatore who is also an Isha meditator\",\n  \"offset\": 0,\n  \"limit\": 20\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));",
+            "const first = (pm.response.json().results ?? [])[0];",
+            "if (first) pm.collectionVariables.set('candidateId', first.candidate_id);"
+          ] } }]
+        },
+        {
+          "name": "Search candidates - next page",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/query",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"query\": \"anyone in India\",\n  \"offset\": 20,\n  \"limit\": 20\n}" }
+          },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "Domains",
+          "request": { "method": "GET", "description": "Domains jobs are labelled with (the list grows), with candidate counts.", "url": "{{baseUrl}}/domains" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));"
+          ] } }]
+        },
+        {
+          "name": "Roles",
+          "request": { "method": "GET", "description": "The fixed role list jobs are labelled with.", "url": "{{baseUrl}}/roles" },
+          "event": [{ "listen": "test", "script": { "exec": [
+            "pm.test('200', () => pm.response.to.have.status(200));"
+          ] } }]
+        }
+      ]
+    },
+    {
+      "name": "Admin (deletes data)",
+      "item": [
+        {
+          "name": "Clear query cache",
+          "request": { "method": "DELETE", "description": "Forgets saved query readings only - use after a query prompt change; candidates are kept.", "url": "{{baseUrl}}/query_cache" }
+        },
+        {
+          "name": "Clear all data",
+          "request": { "method": "DELETE", "description": "Deletes every candidate. Cannot be undone.", "url": "{{baseUrl}}/clear_all_data" }
+        },
+        {
+          "name": "Drop all tables",
+          "request": { "method": "DELETE", "description": "Drops every table. Cannot be undone; run Create all tables afterwards.", "url": "{{baseUrl}}/drop_all_tables" }
+        },
+        {
+          "name": "Create all tables",
+          "request": { "method": "POST", "description": "Creates any missing tables and seeds the starter domains.", "url": "{{baseUrl}}/create_all_tables" }
+        }
+      ]
+    }
+  ]
+}
