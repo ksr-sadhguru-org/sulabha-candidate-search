@@ -14,6 +14,8 @@ finds and ranks matching candidates, explaining why each one matched.
 - `Tests/` — test scenarios ([scenarios.md](Tests/scenarios.md)), their machine-checkable expected results
   (`expected-results.json`), the synthetic test resumes (`Candidate Resumes for Tests/`) and `run-tests.mjs`,
   which checks the running API against them (see step 6 of Getting started)
+- `docs/` — architecture diagrams ([architecture.html](docs/architecture.html): bulk upload and candidate search;
+  rebuild with `node docs/build-architecture.mjs`)
 
 ## Stack
 
