@@ -1,0 +1,26 @@
+name: candidatesearch-python
+
+# The Python API on port 8001, so it can run next to the Java API (8000). It uses its own database, candidate_db_py, in the
+# Postgres container of the Java compose project (candidatesearch-db-1, published on host port 5432).
+# Once the Java API is retired, add the `db` service from CandidateSearchAPI/docker-compose.yml here and point DB_HOST at it.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - DB_HOST=host.docker.internal
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=candidate_db_py
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4.1}
+      - OPENAI_QUERY_MODEL=${OPENAI_QUERY_MODEL:-gpt-4.1}
+      - MOCK_LLM=${MOCK_LLM:-false}
+    restart: unless-stopped

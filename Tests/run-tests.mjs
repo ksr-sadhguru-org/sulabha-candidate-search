@@ -1,4 +1,4 @@
-// End-to-end check of the running API (localhost:8000) against expected-results.json.
+// End-to-end check of the running API (localhost:8000, or API_URL) against expected-results.json.
 // By default it reuses the data already loaded and only runs the checks. Reset only what a change needs:
 //   --fresh                         clear ALL data, upload every test resume (after upload/profile changes)
 //   --reupload="Deepa Nair,Kiran Rao"  delete and re-upload just these people's resumes
@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const API = 'http://localhost:8000';
+const API = process.env.API_URL ?? 'http://localhost:8000';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DIR = path.join(HERE, 'Candidate Resumes for Tests');
 const spec = JSON.parse(fs.readFileSync(path.join(HERE, 'expected-results.json'), 'utf8'));

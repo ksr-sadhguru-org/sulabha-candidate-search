@@ -1,0 +1,10 @@
+fastapi==0.162.0
+uvicorn==0.54.0
+python-multipart==0.0.33
+psycopg[binary]==3.3.8
+psycopg-pool==3.3.3
+pydantic-settings==2.16.2
+httpx==0.28.1
+pdfminer.six==20260107
+python-docx==1.2.0
+olefile==0.47
