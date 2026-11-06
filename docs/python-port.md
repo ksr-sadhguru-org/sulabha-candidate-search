@@ -28,7 +28,7 @@ Port the stack to Python, in this order, keeping the Java and Angular versions u
 
 Both ports are built and verified except for one thing: **the live LLM** (see Open items).
 
-**API port: done** (not committed when this was written - check `git status`).
+**API port: done.**
 
 | Check | Result |
 |---|---|
@@ -41,7 +41,7 @@ Both ports are built and verified except for one thing: **the live LLM** (see Op
 | Query responses, 66 cached queries | 61 identical; 5 differ only in which equal-score term is `via_term` (Postgres row order) |
 | Bulk upload, errors, CORS | checked by hand |
 
-**UI port: done** (not committed when this was written).
+**UI port: done.**
 
 | Check | Result |
 |---|---|
