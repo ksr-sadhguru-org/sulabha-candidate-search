@@ -82,33 +82,43 @@ const search = sequence({
 
 // ---------- 3. Part 1 in sequence: bulk upload (proposed) ----------
 const L7 = [
-  { x: 80, cls: 'app', title: 'Sulabha UI' },
-  { x: 270, cls: 'aws new', title: 'Intake Lambda', sub: '/upload-bulk-resumes' },
-  { x: 460, cls: 'aws', title: 'Work queue', sub: 'SQS' },
-  { x: 650, cls: 'aws new', title: 'Ingest Lambda' },
-  { x: 840, cls: 'app', title: 'Candidate Search API', sub: 'LLM + PostgreSQL' },
-  { x: 1030, cls: 'aws', title: 'Error queue', sub: 'SQS' },
-  { x: 1220, cls: 'aws new', title: 'Failed-records', sub: 'Lambda' },
+  { x: 77, cls: 'app', title: 'Sulabha UI' },
+  { x: 247, cls: 'aws new', title: 'Intake Lambda', sub: '/upload-bulk-resumes' },
+  { x: 417, cls: 'aws', title: 'Work queue', sub: 'SQS' },
+  { x: 587, cls: 'aws new', title: 'Ingest Lambda' },
+  { x: 757, cls: 'app', title: 'Candidate Search API', sub: 'Spring Boot' },
+  { x: 927, cls: 'ext', title: 'S3 bucket', sub: 'Isha resumes' },
+  { x: 1097, cls: 'llm', title: 'LLM', sub: 'OpenAI-compatible' },
+  { x: 1267, cls: 'db', title: 'PostgreSQL', sub: 'candidate_db' },
 ];
 const ingest = sequence({
-  width: 1300, boxW: 160, label: 'Bulk resume upload', lifelines: L7, steps: [
+  width: 1350, boxW: 156, label: 'Bulk resume upload', lifelines: L7, steps: [
     { msg: [0, 1], label: ['POST /upload-bulk-resumes', '[{ candidate_id, s3 link }]'] },
     { msg: [1, 2], label: ['one event per record', '{ candidate_id, s3 link }'] },
     { msg: [1, 0], label: '202 Accepted', dashed: true },
-    { frame: 'start', label: 'for each record - in parallel, capped to the LLM rate limit', from: 2, to: 4, pad: 112 },
+    { frame: 'start', label: 'for each record - in parallel, capped to the LLM rate limit', from: 2, to: 7, pad: 72 },
     { msg: [2, 3], label: 'record event' },
-    { note: 3, w: 190, lines: ['download the file', 'from S3 (the link)'] },
-    { msg: [3, 4], label: ['POST /upload-resume/{candidate_id}', 'the file'] },
-    { note: 4, w: 200, lines: ['extract the text', 'duplicate check', 'LLM: suggest form, build profile', 'save in PostgreSQL'] },
+    { msg: [3, 4], label: ['POST /upload-resume/{candidate_id}', '{ s3 link }'] },
+    { msg: [4, 5], label: 'download the file' },
+    { msg: [5, 4], label: 'the file', dashed: true },
+    { note: 4, w: 150, lines: ['extract the text'] },
+    { msg: [4, 7], label: 'duplicate check (hash lookup)' },
+    { msg: [7, 4], label: 'same resume on file, or none', dashed: true },
+    { frame: 'start', label: 'not a duplicate', from: 4, to: 7 },
+    { msg: [4, 6], label: 'build the search profile' },
+    { msg: [6, 4], label: 'profile JSON', dashed: true },
+    { msg: [4, 7], label: 'save the candidate and search profile' },
+    { frame: 'end' },
     { msg: [4, 3], label: 'Saved / skipped (duplicate)', dashed: true },
     { frame: 'end' },
-    { frame: 'start', label: 'on any error', from: 3, to: 5 },
-    { msg: [3, 5], label: ['error message', '(candidate_id + reason)'] },
+    { frame: 'start', label: 'if any step fails (instead of the result above)', from: 3, to: 7 },
+    { msg: [4, 7], label: ['record in failed_resumes', '(candidate_id, s3 link, reason)'] },
+    { msg: [4, 3], label: 'failed', dashed: true },
     { frame: 'end' },
-    { msg: [0, 6], label: 'GET /failed-resumes' },
-    { msg: [6, 5], label: 'read the error messages' },
-    { msg: [5, 6], label: 'failed records', dashed: true },
-    { msg: [6, 0], label: 'list of failed records', dashed: true },
+    { msg: [0, 4], label: 'GET /failed-resumes' },
+    { msg: [4, 7], label: 'read the failed_resumes table' },
+    { msg: [7, 4], label: 'failed records', dashed: true },
+    { msg: [4, 0], label: 'list of failed records', dashed: true },
   ],
 });
 
@@ -123,24 +133,20 @@ const arch = (() => {
   p.push(box(195, 50, 100, 100, 'aws dashed', 'API Gateway', ['optional']));
   p.push(box(330, 50, 190, 100, 'aws new', 'Intake Lambda', ['/upload-bulk-resumes', 'exposed to Sulabha UI only', 'one event per record']));
   p.push(box(550, 50, 130, 100, 'aws', 'SQS work queue', ['one event', 'per record']));
-  p.push(box(710, 50, 190, 100, 'aws new', 'Ingest Lambda', ['reads a record from SQS', 'downloads the file from S3', 'POST /upload-resume/{id}']));
-  p.push(box(330, 215, 190, 64, 'aws new', 'Failed-records Lambda', ['GET /failed-resumes']));
-  p.push(box(550, 215, 130, 64, 'aws', 'SQS error queue', ['failed records']));
-  p.push(box(730, 215, 150, 64, 'ext', 'S3 bucket', ['existing resumes']));
+  p.push(box(710, 50, 190, 100, 'aws new', 'Ingest Lambda', ['reads a record from SQS', 'POST /upload-resume/{id}', 'with the S3 link']));
+  p.push(box(550, 175, 130, 50, 'ext', 'S3 bucket', ['Isha resumes']));
   p.push(arrow([[160, 100], [195, 100]]), arrow([[295, 100], [330, 100]]), arrow([[520, 100], [550, 100]]), arrow([[680, 100], [710, 100]]));
-  p.push(arrow([[900, 100], [960, 100], [960, 175], [1020, 175]]));
-  p.push(arrow([[805, 215], [805, 150]]), labelAbove(815, 190, 'GetObject', 'start'));
-  p.push(arrow([[735, 150], [680, 240]]), labelAbove(700, 192, 'on error', 'end'));
-  p.push(arrow([[550, 247], [520, 247]]));
-  p.push(arrow([[330, 247], [160, 247]], { both: true }), labelAbove(245, 239, 'query failed records'));
+  p.push(arrow([[900, 100], [960, 100], [960, 160], [1020, 160]]));
+  p.push(arrow([[680, 200], [1020, 200]]), labelAbove(850, 192, 'API downloads the file'));
+  p.push(arrow([[1020, 240], [160, 240]], { both: true }), labelAbove(330, 232, 'GET /failed-resumes   /   failed records'));
   // part 2
-  p.push(arrow([[160, 395], [975, 395], [975, 215], [1020, 215]], { both: true }), labelAbove(560, 387, 'POST /query   /   ranked candidates'));
+  p.push(arrow([[160, 395], [975, 395], [975, 265], [1020, 265]], { both: true }), labelAbove(560, 387, 'POST /query   /   ranked candidates'));
   // existing app
   p.push(box(1020, 45, 230, 64, 'llm', 'LLM (external)', ['OpenAI-compatible API']));
-  p.push(box(1020, 150, 230, 100, 'app', 'Candidate Search API', ['Spring Boot', 'POST /upload-resume/{id}', 'POST /query']));
-  p.push(box(1020, 310, 230, 90, 'db', 'PostgreSQL', ['candidates, search profiles', 'query cache']));
-  p.push(arrow([[1135, 150], [1135, 109]]), arrow([[1135, 250], [1135, 310]], { both: true }));
-  p.push(`<rect class="swatch newsw" x="20" y="470" width="22" height="14" rx="3"/>` + txt(52, 482, 'red dashed outline = new code to write (in the API: the /upload-resume/{id} endpoint); everything else exists today or is a managed AWS service', 's', 15, 'start'));
+  p.push(box(1020, 140, 230, 140, 'app', 'Candidate Search API', ['Spring Boot', 'POST /upload-resume/{id}', 'GET /failed-resumes', 'POST /query']));
+  p.push(box(1020, 320, 230, 90, 'db', 'PostgreSQL', ['candidates, search profiles', 'query cache, failed resumes']));
+  p.push(arrow([[1135, 140], [1135, 109]]), arrow([[1135, 280], [1135, 320]], { both: true }));
+  p.push(`<rect class="swatch newsw" x="20" y="470" width="22" height="14" rx="3"/>` + txt(52, 482, 'red dashed outline = new code to write (in the API: the /upload-resume/{id} and /failed-resumes endpoints and a failed_resumes table); everything else exists today or is a managed AWS service', 's', 15, 'start'));
   return `<svg viewBox="0 0 ${W} ${H}" style="max-width:${W}px" role="img" aria-label="Architecture: bulk upload and candidate search">${p.join('')}</svg>`;
 })();
 
@@ -187,11 +193,11 @@ const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta n
 <p>Part 1 loads the resumes from S3 through queues; part 2 is the regular candidate search. Both use the same API and database.</p>
 <div class="card">${arch}</div>
 <h2 id="ingest">Part 1 in sequence: bulk upload (proposed)</h2>
-<p>Sulabha sends S3 file links with a candidate id for each. The Intake Lambda queues one event per record; the Ingest Lambda sends each to the API. Errors go to an error queue that Sulabha can query.</p>
+<p>Sulabha sends S3 file links with a candidate id for each. The Intake Lambda queues one event per record; the Ingest Lambda sends each to the API, which downloads the file from S3, builds the search profile and saves it. A failed record is written to Postgres, and Sulabha reads the failures from the API.</p>
 <div class="card">${ingest}</div>
-<ul><li><code>/upload-resume/{id}</code> is new. It runs what today's <code>/upload_resumes_bulk</code> runs per file (extract text, duplicate check, suggest the form, build the profile, save), but takes the candidate id from Sulabha instead of generating a UUID.</li>
-<li>Sending the same id again updates that candidate, so a queue retry never creates a second record.</li>
-<li>A duplicate resume is skipped, not reported as an error.</li></ul>
+<ul><li><code>/upload-resume/{id}</code> is new. It takes the candidate id from the URL (today's bulk upload generates a UUID) and an S3 link, then does the whole job: extract the text, duplicate check, build the profile, save. The API needs read access to the bucket.</li>
+<li><code>/failed-resumes</code> is new too. It reads a new <code>failed_resumes</code> table, so no separate Lambda or error queue is needed.</li>
+<li>Sending the same id again updates that candidate, so a queue retry never creates a second record. A duplicate resume is skipped, not recorded as a failure.</li></ul>
 <h2 id="search">Part 2 in sequence: candidate search (as built)</h2>
 <p>The LLM reads the query only on a cache miss; matching and ranking run in code against Postgres.</p>
 <div class="card">${search}</div>
