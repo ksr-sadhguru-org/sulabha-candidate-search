@@ -21,7 +21,11 @@ identities, local paths) belong in your own `~/.claude/` memory, not here. Setup
   project `candidatesearch`, volume `candidatesearch_postgres_data`). Package `org.isha.candidatesearch`, config
   prefix `candidatesearch`, JSON is snake_case. AI: any OpenAI-compatible endpoint, set in `CandidateSearchAPI/.env`.
 - `CandidateSearchUI/` - Angular 22, port 4200.
-- `Tests/` - `scenarios.md`, `expected-results.json`, test resumes, `run-tests.mjs`.
+- `CandidateSearchAPIPython/` - FastAPI port of the API (port 8001, db `candidate_db_py`); `CandidateSearchUIPython/` - the
+  NiceGUI port of the UI (port 4201). Both built and tested. **Status, decisions and open items:
+  [docs/python-port.md](docs/python-port.md) - read it first when continuing that work, and keep it updated as the work goes on.**
+- `Tests/` - `scenarios.md`, `expected-results.json`, test resumes, `run-tests.mjs` (`API_URL` env var points it at
+  another API, e.g. `http://localhost:8001`).
 - `CandidateSearchAPI/postman/` - Postman collection for every endpoint.
 - The old v1/v2 names (ResumeSearchAPI/UI) are gone - don't reintroduce them.
 

@@ -11,11 +11,16 @@ finds and ranks matching candidates, explaining why each one matched.
 
 - `CandidateSearchUI/` — Angular frontend
 - `CandidateSearchAPI/` — Spring Boot backend (API, database, LLM integration)
+- `CandidateSearchAPIPython/` — the same API in Python (FastAPI), on port 8001 with its own database `candidate_db_py`
+  ([README](CandidateSearchAPIPython/README.md))
+- `CandidateSearchUIPython/` — the same UI in Python (NiceGUI), on port 4201 ([README](CandidateSearchUIPython/README.md));
+  status of both ports: [docs/python-port.md](docs/python-port.md)
 - `Tests/` — test scenarios ([scenarios.md](Tests/scenarios.md)), their machine-checkable expected results
   (`expected-results.json`), the synthetic test resumes (`Candidate Resumes for Tests/`) and `run-tests.mjs`,
   which checks the running API against them (see step 6 of Getting started)
 - `docs/` — architecture diagrams ([architecture.html](docs/architecture.html): bulk upload and candidate search;
-  rebuild with `node docs/build-architecture.mjs`)
+  rebuild with `node docs/build-architecture.mjs`), [AWS design notes](docs/aws-design-notes.md) and the
+  [Python port notes](docs/python-port.md)
 
 ## Stack
 
