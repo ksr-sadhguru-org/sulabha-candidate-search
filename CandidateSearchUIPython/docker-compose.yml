@@ -1,0 +1,16 @@
+name: candidatesearch-ui-python
+
+# The Python UI on port 4201 (the Angular UI uses 4200). It calls the API from the server side, so API_URL is read from inside the
+# container: the Python API's container publishes 8001 on the host (CandidateSearchAPIPython). For the Java API use port 8000.
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "4201:4201"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - API_URL=${API_URL:-http://host.docker.internal:8001}
+    restart: unless-stopped
