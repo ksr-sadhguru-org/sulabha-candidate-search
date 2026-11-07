@@ -62,7 +62,7 @@ Turn this HR search query into search criteria. Correct spelling mistakes.
   minYears: years of experience tied to the job ("electrician with 5+ years" -> 5), else null.
 - must: the specific skills, tools or languages asked for, each one term - including one named in the job title
   ("java developer" -> "java"; "java and python developer" and "python, java developer" -> "java", "python";
-  "knows tally" -> "tally";
+  "knows tally" -> "tally"; a bare "python" is a skill, not a job: "python" -> "python";
   "sanskrit teacher" -> "sanskrit"). Not the job itself. Years asked with the job belong to its skill
   ("java developer with 8+ years" -> "java", minYears 8).
   term: lowercase, as a resume would write it ("tally", not "tally software"). alternatives: equivalents and

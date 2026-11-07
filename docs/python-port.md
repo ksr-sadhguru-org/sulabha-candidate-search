@@ -2,7 +2,7 @@
 
 Written so work can continue on any machine: read this, then the READMEs of
 [CandidateSearchAPIPython](../CandidateSearchAPIPython/README.md) and [CandidateSearchUIPython](../CandidateSearchUIPython/README.md).
-Last updated: 2026-11-06. No secrets or local paths belong here.
+Last updated: 2026-11-07. No secrets or local paths belong here.
 
 ## Goal
 
@@ -26,7 +26,7 @@ Port the stack to Python, in this order, keeping the Java and Angular versions u
 
 ## Status
 
-Both ports are built and verified except for one thing: **the live LLM** (see Open items).
+Both ports are built and verified, including against a live LLM (public OpenAI, `gpt-5.4-mini`, run on 2026-11-07).
 
 **API port: done.**
 
@@ -34,8 +34,9 @@ Both ports are built and verified except for one thing: **the live LLM** (see Op
 |---|---|
 | Unit tests (`pytest`) | 13 pass |
 | `Tests/run-tests.mjs` on the loaded data, Java baseline 230/230 | 230/230, also from the Docker image |
-| `Tests/run-tests.mjs --fresh`, Java baseline 234/234 | 234/234, with the LLM answers replayed from the Java data (live LLM unavailable) |
-| Prompts | identical to the Java text blocks |
+| `Tests/run-tests.mjs --fresh`, Java baseline 234/234 | 234/234 with the LLM answers replayed from the Java data |
+| Same, on the live LLM (2026-11-07) | 231/234 - all 35 uploads and every profile check pass; the 3 misses were how the AI reads two queries, fixed afterwards (see Open items): loaded-data run 225/225 |
+| Prompts | identical to the Java text blocks, except one example added to the QUERY prompt on 2026-11-07 (see Open items) |
 | Extracted resume text, 35 test resumes | byte-identical to Java's, so duplicate hashes agree |
 | Stored rows after an upload (profile JSON, 347 expertise rows, domains) | identical to Java's |
 | Query responses, 66 cached queries | 61 identical; 5 differ only in which equal-score term is `via_term` (Postgres row order) |
@@ -46,7 +47,7 @@ Both ports are built and verified except for one thing: **the live LLM** (see Op
 | Check | Result |
 |---|---|
 | Unit and page tests (`pytest`, NiceGUI simulated user, fake backend) | 18 pass |
-| `tests/e2e_check.py` in a visible Chrome: search, Load more, open and save a record, upload two resumes, Save All, tab state, Admin | 15/15, no console errors (API had the replayed LLM answers) |
+| `tests/e2e_check.py` in a visible Chrome: search, Load more, open and save a record, upload a resume, Save All, tab state, Admin | 15/15, no console errors - with replayed LLM answers, and again on the live LLM (2026-11-07) |
 | Docker image | builds, healthy, reaches the API container through the host |
 
 The three pages, the shared expandable panel and record editor mirror the Angular structure (mapping table in the UI README). Known
@@ -63,13 +64,23 @@ differences: editable dropdowns are Quasar selects, tooltips and the file picker
 
 ## Open items
 
-- **LLM key.** On 2026-11-06 the Azure OpenAI key in `CandidateSearchAPI/.env` answered `401 PermissionDenied` to the Java
-  API as well as the Python one (same key, same endpoint), so the live LLM was never exercised from Python. Renew the key
-  (or check network access to the Azure resource), then run `API_URL=http://localhost:8001 node Tests/run-tests.mjs --fresh`
-  (wipes only `candidate_db_py`) and `tests/e2e_check.py` to confirm the real LLM path.
+- **Java does not have the 2026-11-07 query fixes yet.** The old Azure key was rejected on 2026-11-06 (401, Java API too); on
+  2026-11-07 it was replaced by a public OpenAI key (`OPENAI_BASE_URL` blank or `https://api.openai.com/v1/`, model
+  `gpt-5.4-mini`) and the suites ran: API `--fresh` 231/234, UI e2e 15/15. The 3 misses were the model reading two queries
+  differently (the request sent is the same as Java's: one user message, temperature 0, JSON mode, same domain list):
+  - **D2 "python"** (2 checks): read as a *job* "python" with no must-have skill in 5 of 6 calls, so Kavya Subramanian (an
+    accountant who knows Python) was not returned. Fixed in the QUERY prompt's `must` rule by one example (`a bare "python" is a
+    skill, not a job: "python" -> "python"`): 5/5 calls read it as a skill. The same hint in the `job` rule broke
+    "c++ programmer" (must `c++` lost in 2 of 4 calls) and a wider hint in the role/domain rule broke "trades" - don't move it.
+  - **G3 "knows Java and is in Pune"**: the AI adds role + domain from "Java" alone (6 of 6 calls) and no wording moved it, so it
+    is fixed in code: `QueryParser._complete` drops role and domain when the reading has skills but no job (option A in
+    CLAUDE.md; queries with no skills, "music" / "trades", keep theirs). Unit test `test_skills_without_a_job_drop_role_and_domain`.
+  - After both: scenarios on the loaded data (query cache cleared first) 225/225. `--fresh` not re-run (only the query side changed).
+  - **Not applied to Java:** `Prompts.java` and Java's `QueryParser` still have the old text and no skills-only rule, so the
+    two prompts now differ by that one example. Apply both there (then rebuild and clear the Java query cache) to keep the ports in step;
+    the Java API has not been run on the new key.
 - Legacy binary `.doc` extraction (a small parser over `olefile`) has not run on a real `.doc` - the test resumes are PDF and DOCX.
 - Behaviour differences from the Java API (bad requests answer 400, not 500; `via_term` order) are listed in the API README.
-- Not done yet: mention the new folders in `README.md`, add the Python API to the Postman collection notes, decide whether to
-  retire the Java API and Angular UI once the Python ones have run on the live LLM (the Python API's compose file would then
-  need its own `db` service).
+- Not done yet: add the Python API to the Postman collection notes, decide whether to retire the Java API and Angular UI now
+  that the Python ones have run on a live LLM (the Python API's compose file would then need its own `db` service).
 - Related, separate topic: [aws-design-notes.md](aws-design-notes.md) and the architecture diagrams in [architecture.html](architecture.html).

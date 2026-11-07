@@ -40,12 +40,15 @@ def _tidy(n: Need | None) -> Need | None:
 
 def _complete(q: ParsedQuery, known: list[str]) -> ParsedQuery:
     """No Nones downstream: missing lists become empty, a missing "understood" counts as understood; a role not on the
-    fixed list (or "other") and a domain not on the domain list are dropped - a query can't invent either."""
-    role = roles.normalize(q.role)
-    domain = domain_names.normalize(q.domain)
+    fixed list (or "other") and a domain not on the domain list are dropped - a query can't invent either. Skills with
+    no job ("knows java") name no role or domain, so any the AI added from the technology alone are dropped."""
+    role, domain = roles.normalize(q.role), domain_names.normalize(q.domain)
+    job, must = _tidy(q.job), _tidy_all(q.must)
+    skills_only = job is None and bool(must)
     return ParsedQuery(understood=q.understood is None or q.understood,
-                       role=None if role == roles.OTHER else role, domain=domain if domain in known else None,
-                       job=_tidy(q.job), must=_tidy_all(q.must), nice=_tidy_all(q.nice), filters=q.filters)
+                       role=None if skills_only or role == roles.OTHER else role,
+                       domain=None if skills_only or domain not in known else domain,
+                       job=job, must=must, nice=_tidy_all(q.nice), filters=q.filters)
 
 
 def _tidy_all(needs: list[Need] | None) -> list[Need]:

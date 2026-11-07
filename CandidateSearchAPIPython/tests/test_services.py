@@ -67,3 +67,13 @@ def test_query_reading_is_completed():
     assert _complete(ParsedQuery(role="other"), []).role is None
     broad = ParsedQuery.model_validate({"job": {"term": "software developer", "alternatives": ["developer", "programmer"]}})
     assert _complete(broad, []).job.alternatives == ["programmer"]
+
+
+def test_skills_without_a_job_drop_role_and_domain():
+    java = {"role": "engineer / developer", "domain": "software & it", "must": [{"term": "java"}]}
+    q = _complete(ParsedQuery.model_validate(java), ["software & it"])
+    assert (q.role, q.domain, [n.term for n in q.must]) == (None, None, ["java"])
+    with_job = _complete(ParsedQuery.model_validate({**java, "job": {"term": "java developer"}}), ["software & it"])
+    assert (with_job.role, with_job.domain) == ("engineer / developer", "software & it")
+    music = _complete(ParsedQuery.model_validate({"domain": "music"}), ["music"])
+    assert music.domain == "music"

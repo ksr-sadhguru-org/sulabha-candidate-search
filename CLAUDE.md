@@ -79,6 +79,7 @@ Tags: `known-good-same-field` (cb0f886, before role + domain), `v1.0`.
 - **G3 "Candidate who knows Java and is in Pune"** - flaky: the AI sometimes adds role engineer/developer + domain
   software though no job was asked, so Priya Menon (QA, Pune, knows Java) ranks as partial. Proposed:
   (A) code - when the query has skills but no job, ignore role/domain; queries with no skills ("music", "trades")
-  keep them; or (B) a prompt example only. Awaiting a decision.
+  keep them; or (B) a prompt example only. (A) is built in the Python API (2026-11-07, see docs/python-port.md) and
+  fixed it there; the Java API still awaits it. Wording alone did not move the AI on this one.
 - Not built: "an exact qualified job title counts regardless of labels" safety net (undecided).
 - Not done: overlap scan of `STARTER_DOMAINS` (e.g. early childhood vs teaching).
