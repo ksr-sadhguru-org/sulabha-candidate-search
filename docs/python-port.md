@@ -2,7 +2,7 @@
 
 Written so work can continue on any machine: read this, then the READMEs of
 [CandidateSearchAPIPython](../CandidateSearchAPIPython/README.md) and [CandidateSearchUIPython](../CandidateSearchUIPython/README.md).
-Last updated: 2026-11-07. No secrets or local paths belong here.
+Last updated: 2026-11-07 (end of day, see "Where we left off"). No secrets or local paths belong here.
 
 ## Goal
 
@@ -52,6 +52,27 @@ Both ports are built and verified, including against a live LLM (public OpenAI, 
 
 The three pages, the shared expandable panel and record editor mirror the Angular structure (mapping table in the UI README). Known
 differences: editable dropdowns are Quasar selects, tooltips and the file picker are Quasar's, state lives on the server per tab.
+
+## Where we left off (end of 2026-11-07) - resume here on any machine
+
+- **Nothing is half-done.** Everything is committed and pushed. The Python API and UI are verified on a live LLM (API 225/225 on
+  the loaded data after the two query fixes, `--fresh` 231/234 before them and not re-run; UI e2e 15/15; pytest 14 + 18).
+- **Java parked on purpose:** not run on the new key, and without the two query fixes (see Open items). Its `.env` is ready.
+- **Everything was stopped** with `docker compose down` (never `-v`), so on this machine the data volume
+  `candidatesearch_postgres_data` still holds `candidate_db` (Java) and `candidate_db_py` (Python).
+- **On a new machine** (git holds no secrets and no data):
+  1. Install Docker Desktop, Node (for `Tests/run-tests.mjs` and the Angular UI) and optionally Python 3.13 (local pytest; one `.venv`
+     per project, `pip install -r requirements-dev.txt`).
+  2. Copy `.env.example` to `.env` in `CandidateSearchAPI` and `CandidateSearchAPIPython` and fill in the key. Public OpenAI:
+     `OPENAI_BASE_URL=https://api.openai.com/v1/` (or blank), `OPENAI_MODEL` and `OPENAI_QUERY_MODEL` = `gpt-5.4-mini`. Azure
+     (`.../openai/v1/`, deployment names) is the alternative in the example. The Python compose file sets its own `DB_NAME`.
+  3. Start in the order under "How to run and test" below: Postgres (`docker compose up -d db` in `CandidateSearchAPI` if Java is
+     not wanted), create `candidate_db_py` once, then the Python API (8001) and UI (4201).
+  4. The database starts empty. Load the sample resumes and check everything:
+     `API_URL=http://localhost:8001 node Tests/run-tests.mjs --fresh` from the repo root (wipes only that database; ask first, per
+     CLAUDE.md). Expect about 234/234; the model can vary a query reading now and then - re-run the miss before changing anything.
+- **Next, if wanted** (all under Open items): apply the two query changes to Java and run its suites; try a real `.doc` resume;
+  Postman notes for the Python API; decide whether to retire the Java API and Angular UI.
 
 ## How to run and test
 

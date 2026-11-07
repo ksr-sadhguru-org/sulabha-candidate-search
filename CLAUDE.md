@@ -34,7 +34,9 @@ identities, local paths) belong in your own `~/.claude/` memory, not here. Setup
 - Backend: `cd CandidateSearchAPI; docker compose up -d`; health `curl.exe http://localhost:8000/actuator/health`.
   After backend code changes: `docker compose up -d --build; docker image prune -f`.
 - UI: `npm start` in `CandidateSearchUI`.
-- Stop: Ctrl+C (or kill the node process on 4200); `docker compose down`. **Never `down -v`** - it deletes the data.
+- Stop: Ctrl+C (or kill the node process on 4200); `docker compose down` - in `CandidateSearchUIPython`, then
+  `CandidateSearchAPIPython`, then `CandidateSearchAPI` (it owns Postgres). **Never `down -v`** - it deletes the data.
+- Python port: run, test and resume steps for a new machine are in [docs/python-port.md](docs/python-port.md).
 - Docker Desktop is often not running at the start of a session - start it first.
 
 ## Tests
